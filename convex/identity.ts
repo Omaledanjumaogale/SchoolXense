@@ -15,7 +15,7 @@ export const save=internalMutation({args:{authId:v.string(),state:v.string(),lga
  const existing=await ctx.db.query('privateIdentities').withIndex('by_authId',q=>q.eq('authId',a.authId)).unique();
  const values={...a,updatedAt:Date.now()};if(existing)await ctx.db.patch(existing._id,values);else await ctx.db.insert('privateIdentities',values);
  const user=await ctx.db.query('users').withIndex('by_authId',q=>q.eq('authId',a.authId)).unique();
- if(user){await ctx.db.patch(user._id,{state:a.state,lga:a.lga,whatsapp:a.whatsapp,ninLast4:a.last4});
+ if(user){await ctx.db.patch(user._id,{state:a.state,lga:a.lga,whatsapp:a.whatsapp,ninLast4:a.last4,profileComplete:true});
  for(const old of await ctx.db.query('verifications').withIndex('by_user',q=>q.eq('userId',user._id)).collect())if(old.kind==='nin'&&old.status==='approved')await ctx.db.patch(old._id,{status:'pending',note:'Identity updated; fresh review required.'});}
 }});
 export const register=internalAction({args:{authId:v.string(),...fields},handler:async(ctx,a)=>{

@@ -1,6 +1,6 @@
 /** practice.* + forge.* + review.* — Forge adaptive engine (2PL IRT) and SM-2 review, deterministic, no model call per question. */
 import { v, ConvexError } from 'convex/values';
-import { withAccess, isTenantMember } from './lib/access';
+import { withAccess, hasRole } from './lib/access';
 import type { Id } from './_generated/dataModel';
 import { updateAbility, pickNextItem } from '../src/lib/engines/irt';
 import { review as sm2, newCard, qualityFromAnswer } from '../src/lib/engines/sm2';
@@ -8,19 +8,30 @@ import { waecGrade } from '../src/lib/engines/grading';
 import { estimateReadiness } from '../src/lib/engines/readiness';
 import { rateLimiter } from './rateLimits';
 import { attemptAggregate } from './components';
+import { entitlement, requireCapability } from './lib/entitlements';
+import type { QueryCtx } from './_generated/server';
+
+async function hostedAccess(ctx:QueryCtx,userId:Id<'users'>,examId:Id<'hostedExams'>){
+	const exam=await ctx.db.get(examId);if(!exam||exam.status!=='live')throw new ConvexError('TENANT_FORBIDDEN');
+	if(await hasRole(ctx,userId,'staff'))return exam;
+	const member=await ctx.db.query('tenantMembers').withIndex('by_tenant_user',q=>q.eq('tenantId',exam.tenantId).eq('userId',userId)).unique();
+	if(!member)throw new ConvexError('TENANT_FORBIDDEN');
+	const licences=await ctx.db.query('licences').withIndex('by_tenant',q=>q.eq('tenantId',exam.tenantId)).collect();
+	if(!licences.some(x=>x.startsAt<=Date.now()&&x.endsAt>Date.now()&&x.seats>0))throw new ConvexError('LICENCE_REQUIRED');
+	return exam;
+}
 
 export const start = withAccess({ role: 'learner' }).mutation({
 	args: { exam: v.string(), subject: v.string(), mode: v.union(v.literal('drill'), v.literal('mock')), topic: v.optional(v.string()), hostedExamId: v.optional(v.id('hostedExams')), clientId: v.optional(v.string()) },
 	handler: async (ctx, a) => {
-		if (a.clientId) { const ex = await ctx.db.query('attempts').withIndex('by_clientId', (q) => q.eq('clientId', a.clientId)).unique(); if (ex) { if (ex.userId !== ctx.user._id) throw new ConvexError('FORBIDDEN'); return ex._id; } }
+		if (a.clientId) { const ex = await ctx.db.query('attempts').withIndex('by_clientId', (q) => q.eq('clientId', a.clientId)).unique(); if (ex) { if (ex.userId !== ctx.user._id) throw new ConvexError('FORBIDDEN');if(ex.hostedExamId)await hostedAccess(ctx,ctx.user._id,ex.hostedExamId);else if(ex.mode==='mock')await requireCapability(ctx,ctx.user._id,'practice.mock'); return ex._id; } }
 		// Timed mocks are a paid feature. Institution-hosted exams are authorized by
 		// tenant membership instead and may be started without a personal subscription.
 		if (a.mode === 'mock' && !a.hostedExamId) {
-			const subscription = await ctx.db.query('subscriptions').withIndex('by_user', q => q.eq('userId', ctx.user._id)).order('desc').first();
-			if (!subscription || subscription.until <= Date.now()) throw new ConvexError('SUBSCRIPTION_REQUIRED');
+			await requireCapability(ctx,ctx.user._id,'practice.mock');
 		}
 		let queue: Id<'questions'>[] | undefined;
-		if (a.hostedExamId) { const exam = await ctx.db.get(a.hostedExamId); const member = exam && await ctx.db.query('tenantMembers').withIndex('by_tenant_user', q => q.eq('tenantId', exam.tenantId).eq('userId', ctx.user._id)).unique(); if (!exam || !member || exam.status !== 'live') throw new ConvexError('TENANT_FORBIDDEN'); queue = exam.questionIds; }
+		if (a.hostedExamId) { const exam=await hostedAccess(ctx,ctx.user._id,a.hostedExamId);if(a.exam!==exam.exam||a.subject!==exam.subject)throw new ConvexError('Invalid assessment details.'); queue=exam.questionIds; }
 		else if (a.mode === 'mock') queue = (await ctx.db.query('questions').withIndex('by_exam_subject_topic', (q) => q.eq('exam', a.exam).eq('subject', a.subject)).take(200)).filter((q) => q.status === 'reviewed').sort(() => Math.random() - 0.5).slice(0, 20).map((q) => q._id);
 		if (queue && !queue.length) throw new ConvexError('No reviewed questions are available for this subject yet.');
 		return ctx.db.insert('attempts', { userId: ctx.user._id, exam: a.exam, subject: a.subject, mode: a.mode, topic: a.topic, target: queue?.length ?? 10, timeLimitSec: queue ? queue.length * 60 : undefined, queue, startedAt: Date.now(), hostedExamId: a.hostedExamId, clientId: a.clientId });
@@ -33,6 +44,8 @@ export const nextItem = withAccess().query({
 	handler: async (ctx, { attemptId }) => {
 		const at = await ctx.db.get(attemptId);
 		if (!at || at.userId !== ctx.user._id || at.endedAt || (at.timeLimitSec && Date.now() > at.startedAt + at.timeLimitSec * 1000)) return null;
+		if(at.mode==='mock'&&!at.hostedExamId)await requireCapability(ctx,ctx.user._id,'practice.mock');
+		if(at.hostedExamId)await hostedAccess(ctx,ctx.user._id,at.hostedExamId);
 		const answered = await ctx.db.query('attemptAnswers').withIndex('by_attempt', (q) => q.eq('attemptId', attemptId)).collect();
 		if (answered.length >= at.target) return null;
 		if (at.queue) { const q = await ctx.db.get(at.queue[answered.length]); return q?.status === 'reviewed' ? { ...q, answer: undefined, explanation: undefined } : null; }
@@ -51,6 +64,8 @@ export const answer = withAccess().mutation({
 		if (a.clientId) { const previous = await ctx.db.query('attemptAnswers').withIndex('by_clientId', q => q.eq('clientId', a.clientId)).unique(); if (previous) { if (previous.userId !== ctx.user._id) throw new ConvexError('FORBIDDEN'); return null; } }
 		const at = await ctx.db.get(a.attemptId);
 		if (!at || at.userId !== ctx.user._id || at.endedAt) throw new ConvexError('FORBIDDEN');
+		if(at.mode==='mock'&&!at.hostedExamId)await requireCapability(ctx,ctx.user._id,'practice.mock');
+		if(at.hostedExamId)await hostedAccess(ctx,ctx.user._id,at.hostedExamId);
 		if (at.timeLimitSec && Date.now() > at.startedAt + at.timeLimitSec * 1000) throw new ConvexError('Time is up. Finish to save your result.');
 		const previousAnswers = await ctx.db.query('attemptAnswers').withIndex('by_attempt', q => q.eq('attemptId', at._id)).collect();
 		const q = await ctx.db.get(a.questionId);
@@ -62,8 +77,8 @@ export const answer = withAccess().mutation({
 			if(expected?._id!==q._id) throw new ConvexError('Answer the current question before continuing.');
 		}
 		if ((a.chosen !== null && (!Number.isInteger(a.chosen) || a.chosen < 0 || a.chosen >= q.options.length)) || !Number.isFinite(a.ms) || a.ms < 0 || a.ms > 3600000) throw new ConvexError('Invalid answer.');
-		const sub = await ctx.db.query('subscriptions').withIndex('by_user', x => x.eq('userId', ctx.user._id)).order('desc').first();
-		if (!sub || sub.until < Date.now()) await rateLimiter.limit(ctx, 'freeDailyQuestions', { key: ctx.user._id, count: 1, throws: true });
+		const current = await entitlement(ctx,ctx.user._id);
+		if (!current.active && !(await hasRole(ctx,ctx.user._id,'staff')) && !at.hostedExamId) await rateLimiter.limit(ctx, 'freeDailyQuestions', { key: ctx.user._id, count: 1, throws: true });
 		const correct = a.chosen === q.answer;
 		await ctx.db.insert('attemptAnswers', { attemptId: a.attemptId, userId: ctx.user._id, questionId: q._id, chosen: a.chosen, correct, ms: a.ms, at: Date.now(), clientId: a.clientId });
 		const m = await ctx.db.query('mastery').withIndex('by_key', (x) => x.eq('userId', ctx.user._id).eq('exam', at.exam).eq('subject', at.subject).eq('topic', q.topic)).unique();
@@ -98,16 +113,18 @@ export const finish = withAccess().mutation({
 	}
 });
 
-export const reviewDue = withAccess().query({ args: {}, handler: (ctx) => ctx.db.query('reviewQueue').withIndex('by_user_due', (q) => q.eq('userId', ctx.user._id).lte('dueAt', Date.now())).take(100) });
+export const reviewDue = withAccess({capability:'practice.review'}).query({ args: {}, handler: (ctx) => ctx.db.query('reviewQueue').withIndex('by_user_due', (q) => q.eq('userId', ctx.user._id).lte('dueAt', Date.now())).take(100) });
 
 export const readiness = withAccess().query({
 	args: { exam: v.string(), userId: v.optional(v.id('users')) },
 	handler: async (ctx, { exam, userId }) => {
 		const uid = userId ?? ctx.user._id; // guardians/tenant staff pass a child/learner id; checked below
-		if (uid !== ctx.user._id) {
+		const staff=await hasRole(ctx,ctx.user._id,'staff');
+		if (uid !== ctx.user._id && !staff) {
 			const link = await ctx.db.query('guardianLinks').withIndex('by_child', (q) => q.eq('childId', uid)).collect();
 			if (!link.some((l) => l.guardianId === ctx.user._id)) throw new ConvexError('FORBIDDEN');
 		}
+		if(!staff)await requireCapability(ctx,uid,'practice.readiness');
 		const rows = await ctx.db.query('mastery').withIndex('by_user_exam', (q) => q.eq('userId', uid).eq('exam', exam)).collect();
 		const answered = rows.reduce((s, r) => s + r.answered, 0);
 		const mastery = rows.length ? rows.reduce((s, r) => s + r.correct / Math.max(1, r.answered), 0) / rows.length : 0;

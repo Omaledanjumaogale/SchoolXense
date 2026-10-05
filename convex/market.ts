@@ -1,7 +1,8 @@
 /** offers.* match.* bookings.* escrow.* disputes.* handoffs.* — Hive Tutors & Cohorts. */
 import { v, ConvexError } from 'convex/values';
 import { internal } from './_generated/api';
-import { withAccess, audit } from './lib/access';
+import { withAccess, audit, hasRole } from './lib/access';
+import { requireCapability, profileIsComplete } from './lib/entitlements';
 import { screen } from '../src/lib/engines/integrity';
 import { rank } from '../src/lib/engines/matching';
 
@@ -19,6 +20,9 @@ export const create = withAccess({ role: 'learner' }).mutation({
 	handler: async (ctx, a) => {
 		const o = await ctx.db.get(a.offerId);
 		if (!o || !o.active) throw new ConvexError('OFFER_UNAVAILABLE');
+		const tutor=await ctx.db.get(o.tutorId),staff=await hasRole(ctx,o.tutorId,'staff');
+		if(!tutor||tutor.status!=='active'||(!staff&&(!profileIsComplete(tutor)||!(await hasRole(ctx,o.tutorId,'tutor')))))throw new ConvexError('OFFER_UNAVAILABLE');
+		await requireCapability(ctx,o.tutorId,'market.earn');
 		if (!Number.isInteger(a.minutes) || a.minutes < 15 || a.minutes > 180 || !Number.isFinite(Date.parse(a.slot)) || Date.parse(a.slot) < Date.now() || a.topic.trim().length < 2 || a.topic.length > 120 || (a.note?.length ?? 0)>2000 || o.tutorId===ctx.user._id) throw new ConvexError('Invalid booking details.');
 		const verdict = screen(`${a.topic} ${a.note ?? ''}`);
 		if (!verdict.allowed) {

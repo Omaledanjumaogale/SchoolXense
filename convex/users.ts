@@ -1,13 +1,14 @@
 import { v, ConvexError } from 'convex/values';
 import { withAccess, audit } from './lib/access';
 import { residence } from './lib/profileValidation';
+import { entitlement } from './lib/entitlements';
 
 export const me = withAccess().query({
 	args: {},
 	handler: async (ctx) => {
 		const roles = await ctx.db.query('roles').withIndex('by_user', (q) => q.eq('userId', ctx.user._id)).collect();
-		const sub = await ctx.db.query('subscriptions').withIndex('by_user', (q) => q.eq('userId', ctx.user._id)).order('desc').first();
-		return { ...ctx.user, roles: roles.map((r) => r.role), plan: sub ?? null };
+		const current = await entitlement(ctx,ctx.user._id);
+		return { ...ctx.user, roles: roles.map((r) => r.role), plan: current.active?current.subscription:null };
 	}
 });
 

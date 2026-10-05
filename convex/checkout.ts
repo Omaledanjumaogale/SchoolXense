@@ -1,17 +1,23 @@
 import { mutation, query } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
-import { resolve } from './lib/access';
-import { PLANS } from '../src/lib/payments/plans';
+import { resolve, hasRole } from './lib/access';
+import { profileIsComplete } from './lib/entitlements';
+import { planById } from '../src/lib/payments/plans';
 import type { Id } from './_generated/dataModel';
 
-export const order = mutation({ args: { kind: v.union(v.literal('subscription'), v.literal('booking'), v.literal('pack'), v.literal('cohort')), refId: v.string() }, handler: async (ctx, args) => {
+export const order = mutation({ args: { kind: v.union(v.literal('subscription'), v.literal('booking'), v.literal('pack'), v.literal('cohort')), refId: v.string(), beneficiaryId:v.optional(v.id('users')) }, handler: async (ctx, args) => {
 	const { user } = await resolve(ctx);
 	let amount: bigint, refId = args.refId, purpose: 'subscription' | 'booking' | 'pack' | 'cohort' | 'exam_pass' = args.kind;
 	if (args.kind === 'subscription') {
 		if (user.isMinor) throw new ConvexError('A linked guardian must arrange paid access for under-18 learners.');
-		const plan = PLANS.find(x => x.id === refId);
-		if (!plan || !['plus_month', 'plus_year', 'exam_pass'].includes(plan.id)) throw new ConvexError('Invalid plan.');
-		amount = BigInt(plan.priceKobo); purpose = plan.id === 'exam_pass' ? 'exam_pass' : 'subscription'; refId = `${plan.id}:${user._id}`;
+		const beneficiary=args.beneficiaryId??user._id;
+		if(beneficiary!==user._id){
+			const child=await ctx.db.get(beneficiary),links=await ctx.db.query('guardianLinks').withIndex('by_child',q=>q.eq('childId',beneficiary)).collect();
+			if(!(await hasRole(ctx,user._id,'guardian'))||!child?.isMinor||child.status!=='active'||!profileIsComplete(child)||!links.some(x=>x.guardianId===user._id))throw new ConvexError('FORBIDDEN');
+		}
+		const plan = planById(refId);
+		if (!plan || !plan.purchasable || plan.priceKobo<=0) throw new ConvexError('Invalid plan.');
+		amount = BigInt(plan.priceKobo); purpose = plan.id === 'exam_pass' ? 'exam_pass' : 'subscription'; refId = `${plan.id}:${beneficiary}`;
 	} else if (args.kind === 'booking') {
 		const booking = await ctx.db.get(refId as Id<'bookings'>);
 		if (!booking || booking.status !== 'pending_payment') throw new ConvexError('Booking is unavailable or awaiting guardian consent.');

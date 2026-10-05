@@ -1,11 +1,11 @@
 /** studio.* royalties.* packs.* — question supply, two-reviewer approval, monthly royalties, originality. */
 import { v, ConvexError } from 'convex/values';
 import { internalMutation } from './_generated/server';
-import { withAccess, audit } from './lib/access';
+import { withAccess, audit, hasRole } from './lib/access';
 import { post, systemWallet, userWallet, balance } from './lib/ledger';
 import { validateQuestions } from '../src/lib/ai-validation';
 
-export const submit = withAccess({ role: 'creator', adultOnly: true }).mutation({
+export const submit = withAccess({ role: 'creator', adultOnly: true, capability:'studio.create' }).mutation({
 	args: { briefId: v.id('studioBriefs'), stem: v.string(), options: v.array(v.string()), answer: v.number(), explanation: v.string() },
 	handler: async (ctx, a) => {
 		const brief = await ctx.db.get(a.briefId); if (!brief?.open) throw new ConvexError('Brief is closed.');
@@ -14,13 +14,13 @@ export const submit = withAccess({ role: 'creator', adultOnly: true }).mutation(
 	}
 });
 
-export const review = withAccess({ role: 'creator', adultOnly: true }).mutation({
+export const review = withAccess({ role: 'creator', adultOnly: true, capability:'studio.create' }).mutation({
 	args: { submissionId: v.id('studioSubmissions'), approve: v.boolean() },
 	handler: async (ctx, { submissionId, approve }) => {
 		const s = (await ctx.db.get(submissionId))!;
 		if (!s || s.status !== 'pending') throw new ConvexError('Submission has already been reviewed.');
 		const checks = await ctx.db.query('verifications').withIndex('by_user', q=>q.eq('userId',ctx.user._id)).collect();
-		if (!checks.some(x=>x.kind==='nin' && x.status==='approved')) throw new ConvexError('Verified reviewers only.');
+		if (!(await hasRole(ctx,ctx.user._id,'staff'))&&!checks.some(x=>x.kind==='nin' && x.status==='approved')) throw new ConvexError('Verified reviewers only.');
 		if (s.approvals.includes(ctx.user._id)||s.rejections.includes(ctx.user._id)) throw new ConvexError('You already reviewed this submission.');
 		if (s.authorId === ctx.user._id) throw new ConvexError('SELF_REVIEW');
 		const approvals = approve ? [...new Set([...s.approvals, ctx.user._id])] : s.approvals;
@@ -72,7 +72,7 @@ export const computeMonthly = internalMutation({
 });
 
 /** packs.submit → originality.check (Copyleaks) → live or rejected. */
-export const submitPack = withAccess({ role: 'creator', adultOnly: true }).mutation({
+export const submitPack = withAccess({ role: 'creator', adultOnly: true, capability:'studio.create' }).mutation({
 	args: { title: v.string(), subject: v.string(), exam: v.string(), kind: v.string(), price: v.int64(), pages: v.number(), preview: v.array(v.string()), fileId: v.id('_storage') },
 	handler: async (ctx, a) => {
 		const slug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48);

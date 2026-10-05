@@ -22,6 +22,7 @@
 	];
 	$effect(() => { if (!auth.isLoading && !auth.isAuthenticated) goto(`/login?next=${encodeURIComponent(page.url.pathname + page.url.search)}`, { replaceState: true }); });
 	$effect(() => { if (auth.isAuthenticated && !profile.isLoading && !profile.error && !profile.data) goto(`/welcome?next=${encodeURIComponent(page.url.pathname + page.url.search)}`, { replaceState: true }); });
+	$effect(() => { if (auth.isAuthenticated && profile.data && !profile.data.profileComplete && !profile.data.roles.includes('staff') && page.url.pathname!=='/welcome') goto(`/welcome?next=${encodeURIComponent(page.url.pathname + page.url.search)}`, { replaceState: true }); });
 	async function logout() { await authClient.signOut(); await goto('/'); }
 </script>
 

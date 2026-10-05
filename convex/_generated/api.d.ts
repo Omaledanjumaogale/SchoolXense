@@ -21,6 +21,7 @@ import type * as http from "../http.js";
 import type * as identity from "../identity.js";
 import type * as institutions from "../institutions.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_entitlements from "../lib/entitlements.js";
 import type * as lib_ledger from "../lib/ledger.js";
 import type * as lib_profileValidation from "../lib/profileValidation.js";
 import type * as market from "../market.js";
@@ -31,6 +32,7 @@ import type * as practice from "../practice.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as referrals from "../referrals.js";
 import type * as studio from "../studio.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as trust from "../trust.js";
 import type * as users from "../users.js";
 
@@ -54,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   identity: typeof identity;
   institutions: typeof institutions;
   "lib/access": typeof lib_access;
+  "lib/entitlements": typeof lib_entitlements;
   "lib/ledger": typeof lib_ledger;
   "lib/profileValidation": typeof lib_profileValidation;
   market: typeof market;
@@ -64,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   rateLimits: typeof rateLimits;
   referrals: typeof referrals;
   studio: typeof studio;
+  subscriptions: typeof subscriptions;
   trust: typeof trust;
   users: typeof users;
 }>;

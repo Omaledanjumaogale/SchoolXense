@@ -1,4 +1,8 @@
 import { test, expect } from '@playwright/test';
+test('pricing and guardian consent use authenticated journeys',async({page})=>{
+ await page.goto('/pricing');await page.getByRole('button',{name:'Go Plus',exact:true}).click();await expect(page).toHaveURL(/\/login\?next=\/pricing/);
+ await page.goto('/guardian/consent/test-invitation');await page.getByLabel('I confirm that I am responsible for this learner.').check();await page.getByRole('button',{name:'Sign in to review',exact:true}).click();await expect(page).toHaveURL(/\/login\?next=/);
+});
 test('landing sections and real photos render once without horizontal overflow',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  for(const id of ['learning-community','testimonials','faq','enquiries'])await expect(page.locator('#'+id)).toHaveCount(1);

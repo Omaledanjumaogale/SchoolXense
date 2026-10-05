@@ -14,6 +14,7 @@
 	function safeNext() { return next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : '/home'; }
 	async function submit(event: SubmitEvent) {
 		event.preventDefault(); busy = true; error = ''; notice = '';
+		email=email.trim().toLowerCase();
 		try {
 			if (mode === 'signup') {
 				const response=await fetch('/api/registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password,state:residenceState,lga,whatsapp,nin,ref:page.url.searchParams.get('ref')??undefined})});
@@ -44,6 +45,7 @@
 	}
 	async function resend() {
 		busy = true; error = '';
+		email=email.trim().toLowerCase();
 		try { const result = await authClient.sendVerificationEmail({ email, callbackURL: `${location.origin}/login?verified=1` }); if (result.error) throw new Error(result.error.message); notice = 'If verification is needed, check your inbox for a new link.'; }
 		catch (e) { error = e instanceof Error ? e.message : 'Unable to resend verification.'; }
 		finally { busy = false; }

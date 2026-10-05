@@ -27,7 +27,7 @@ export default defineSchema({
 		referralCode: v.string(), centralReferralCode:v.optional(v.string()), referredBy: v.optional(v.id('users')), creditsDays: v.number(),
 		slug: v.optional(v.string()), headline: v.optional(v.string()), bio: v.optional(v.string()), languages: v.optional(v.array(v.string())),
 		streak: v.number(), lastActiveDay: v.optional(v.string()), status: v.union(v.literal('active'), v.literal('suspended'), v.literal('paused')),
-		legacyUid: v.optional(v.string()), // Firebase uid, kept 90 days for linking
+		profileComplete: v.optional(v.boolean()), legacyUid: v.optional(v.string()), // Firebase uid, kept 90 days for linking
 	}).index('by_authId', ['authId']).index('email', ['email']).index('phone', ['phone']).index('by_slug', ['slug']).index('by_referralCode', ['referralCode']).index('by_legacyUid', ['legacyUid'])
 		.searchIndex('search_name', { searchField: 'name' }),
 	roles: defineTable({ userId: v.id('users'), role, grantedBy: v.optional(v.id('users')), grantedAt: v.number() }).index('by_user', ['userId']).index('by_user_role', ['userId', 'role']),
@@ -118,7 +118,7 @@ export default defineSchema({
 	payouts: defineTable({ userId: v.id('users'), amount: kobo, status: v.union(v.literal('awaiting_approval'), v.literal('queued'), v.literal('processing'), v.literal('paid'), v.literal('failed')), reference: v.string(), approvals: v.array(v.id('users')), flwTransferId: v.optional(v.string()) }).index('by_status', ['status']).index('by_user', ['userId']).index('by_reference', ['reference']),
 	shareAllocations: defineTable({ paymentId: v.id('payments'), slice: v.string(), recipientWalletId: v.id('wallets'), amount: kobo }).index('by_payment', ['paymentId']),
 	invoices: defineTable({ tenantId: v.id('tenants'), title: v.string(), amount: kobo, status: v.union(v.literal('draft'), v.literal('sent'), v.literal('paid')), due: v.number(), virtualAccount: v.optional(v.object({ bank: v.string(), number: v.string() })) }).index('by_tenant', ['tenantId']),
-	subscriptions: defineTable({ userId: v.id('users'), planId: v.string(), until: v.number(), flwPlanId: v.optional(v.string()), paidBy: v.id('users') }).index('by_user', ['userId']),
+	subscriptions: defineTable({ userId: v.id('users'), planId: v.string(), until: v.number(), flwPlanId: v.optional(v.string()), paidBy: v.id('users'), status: v.optional(v.union(v.literal('active'),v.literal('cancelled'),v.literal('expired'))), startedAt:v.optional(v.number()), renewedAt:v.optional(v.number()), cancelAtPeriodEnd:v.optional(v.boolean()), cancelledAt:v.optional(v.number()), sourcePaymentId:v.optional(v.id('payments')) }).index('by_user', ['userId']),
 
 	/* ── 10. Trust & operations ──────────────────────────────────── */
 	integrityFlags: defineTable({ userId: v.id('users'), text: v.string(), reasons: v.array(v.string()), source: v.string(), status: v.union(v.literal('open'), v.literal('upheld'), v.literal('dismissed')) }).index('by_status', ['status']),

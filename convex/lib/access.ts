@@ -7,9 +7,11 @@ import { mutation, query, action, type QueryCtx } from '../_generated/server';
 import { authComponent } from '../auth';
 import { ConvexError,v } from 'convex/values';
 import type { Id, Doc } from '../_generated/dataModel';
+import { profileIsComplete, requireCapability } from './entitlements';
+import type { Capability } from '../../src/lib/payments/plans';
 
 export type Role = 'learner' | 'guardian' | 'tutor' | 'creator' | 'teamlead' | 'ambassador' | 'instadmin' | 'staff';
-type Need = { role?: Role; anyRole?: Role[]; tenantArg?: 'tenantId'; adultOnly?: boolean };
+type Need = { role?: Role; anyRole?: Role[]; tenantArg?: 'tenantId'; adultOnly?: boolean; capability?: Capability; allowIncomplete?: boolean };
 
 export async function hasRole(ctx: QueryCtx, userId: Id<'users'>, role: Role) {
 	const row = await ctx.db.query('roles').withIndex('by_user_role', (q) => q.eq('userId', userId).eq('role', role)).unique();
@@ -29,13 +31,16 @@ export async function resolve(ctx: QueryCtx, need: Need = {}, args: Record<strin
 	if (!user) throw new ConvexError('UNAUTHENTICATED');
 	const userId = user._id;
 	if (user.status !== 'active') throw new ConvexError('ACCOUNT_RESTRICTED');
-	if (need.adultOnly && user.isMinor) throw new ConvexError('ADULTS_ONLY');
-	if (need.role && !(await hasRole(ctx, userId, need.role))) throw new ConvexError('FORBIDDEN');
-	if (need.anyRole) {
+	const staff = await hasRole(ctx,userId,'staff');
+	if (!staff && !need.allowIncomplete && !profileIsComplete(user)) throw new ConvexError('PROFILE_INCOMPLETE');
+	if (need.adultOnly && user.isMinor && !staff) throw new ConvexError('ADULTS_ONLY');
+	if (need.role && !staff && !(await hasRole(ctx, userId, need.role))) throw new ConvexError('FORBIDDEN');
+	if (need.anyRole && !staff) {
 		const ok = await Promise.all(need.anyRole.map((r) => hasRole(ctx, userId, r)));
 		if (!ok.some(Boolean)) throw new ConvexError('FORBIDDEN');
 	}
 	if (need.tenantArg && !(await isTenantMember(ctx, userId, args[need.tenantArg] as Id<'tenants'>))) throw new ConvexError('TENANT_FORBIDDEN');
+	if (need.capability) await requireCapability(ctx, userId, need.capability);
 	return { user };
 }
 

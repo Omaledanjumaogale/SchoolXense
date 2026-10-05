@@ -4,10 +4,13 @@ import { v, ConvexError } from 'convex/values';
 import { rateLimiter } from './rateLimits';
 import { parseQuestions, validateQuestions } from '../src/lib/ai-validation';
 import { screen } from '../src/lib/engines/integrity';
+import { requireCapability } from './lib/entitlements';
+import { resolve } from './lib/access';
 
 export const reserve = internalMutation({ args: { userId: v.id('users') }, handler: async (ctx, { userId }) => {
-	const subscription=await ctx.db.query('subscriptions').withIndex('by_user',q=>q.eq('userId',userId)).order('desc').first();
-	await rateLimiter.limit(ctx, subscription && subscription.until>Date.now() ? 'aiPro' : 'aiFree', { key: userId, throws: true });
+	const {user}=await resolve(ctx,{role:'creator',adultOnly:true});if(user._id!==userId)throw new ConvexError('FORBIDDEN');
+	await requireCapability(ctx,userId,'studio.ai');
+	await rateLimiter.limit(ctx, 'aiPro', { key: userId, throws: true });
 }});
 export const save = internalMutation({ args: { exam: v.string(), subject: v.string(), model: v.string(), items: v.any() }, handler: async (ctx, args) => {
 	const items = validateQuestions(args.items);

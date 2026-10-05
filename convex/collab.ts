@@ -5,7 +5,7 @@ import { post, systemWallet, userWallet } from './lib/ledger';
 import { split, splitByRules } from '../src/lib/engines/hiveShare';
 import { screen } from '../src/lib/engines/integrity';
 
-export const setSplitRules = withAccess({ role: 'teamlead', adultOnly: true }).mutation({
+export const setSplitRules = withAccess({ role: 'teamlead', adultOnly: true, capability:'collab.earn' }).mutation({
 	args: { teamId: v.id('teams'), rules: v.array(v.object({ userId: v.id('users'), bp: v.number() })) },
 	handler: async (ctx, { teamId, rules }) => {
 		const t = (await ctx.db.get(teamId))!;
@@ -21,7 +21,7 @@ export const setSplitRules = withAccess({ role: 'teamlead', adultOnly: true }).m
 	}
 });
 
-export const acceptSplit = withAccess({ adultOnly: true }).mutation({
+export const acceptSplit = withAccess({ adultOnly: true, capability:'collab.earn' }).mutation({
 	args: { teamId: v.id('teams') },
 	handler: async (ctx, { teamId }) => {
 		const mine = (await ctx.db.query('splitRules').withIndex('by_team', (q) => q.eq('teamId', teamId)).collect()).find((r) => r.userId === ctx.user._id);
@@ -30,7 +30,7 @@ export const acceptSplit = withAccess({ adultOnly: true }).mutation({
 	}
 });
 
-export const bid = withAccess({ role: 'teamlead', adultOnly: true }).mutation({
+export const bid = withAccess({ role: 'teamlead', adultOnly: true, capability:'collab.earn' }).mutation({
 	args: { contractId: v.id('contracts'), teamId: v.id('teams'), amount: v.int64(), note: v.string() },
 	handler: async (ctx, a) => {
 		const team=await ctx.db.get(a.teamId),contract=await ctx.db.get(a.contractId);
@@ -66,7 +66,7 @@ export const releaseMilestone = withAccess().mutation({
 	}
 });
 
-export const claimTask = withAccess({ adultOnly: true }).mutation({
+export const claimTask = withAccess({ adultOnly: true, capability:'collab.earn' }).mutation({
 	args: { taskId: v.id('tasks') },
 	handler: async (ctx, { taskId }) => {
 		const t = (await ctx.db.get(taskId))!;

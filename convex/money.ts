@@ -10,6 +10,8 @@ import { post, systemWallet, userWallet, balance } from './lib/ledger';
 import { split, splitByRules, type TxnKind } from '../src/lib/engines/hiveShare';
 import type { Id } from './_generated/dataModel';
 import { workflows } from './components';
+import { planById } from '../src/lib/payments/plans';
+import { entitlement } from './lib/entitlements';
 
 const KIND: Record<string, TxnKind> = { booking: 'session', cohort: 'session', pack: 'pack', contract: 'collab', subscription: 'subscription', exam_pass: 'subscription', invoice: 'licence' };
 const ESCROWED = new Set(['booking', 'cohort', 'contract']);
@@ -80,10 +82,14 @@ export const afterPayment = internalMutation({
 		if (p.purpose === 'booking') await ctx.db.patch(p.refId as Id<'bookings'>, { status: 'confirmed' });
 		if (p.purpose === 'subscription' || p.purpose === 'exam_pass') {
 			const [planId, forUser] = (p.refId ?? '').split(':');
-			const days = planId === 'plus_year' ? 365 : planId === 'plus_month' ? 30 : 90;
+			const plan=planById(planId);if(!plan?.purchasable||p.currency!=='NGN'||plan.priceKobo!==Number(p.amount))throw new ConvexError('Subscription payment requires reconciliation.');
 			const beneficiary=(forUser || p.userId) as Id<'users'>;
+			if(beneficiary!==p.userId){const links=await ctx.db.query('guardianLinks').withIndex('by_child',q=>q.eq('childId',beneficiary)).collect();if(!links.some(x=>x.guardianId===p.userId))throw new ConvexError('Subscription payment ownership requires reconciliation.');}
 			const existing=await ctx.db.query('subscriptions').withIndex('by_user',q=>q.eq('userId',beneficiary)).order('desc').first();
-			await ctx.db.insert('subscriptions', { userId: beneficiary, planId, until: Math.max(Date.now(),existing?.until??0) + days * 86_400_000, paidBy: p.userId });
+			const now=Date.now(),current=await entitlement(ctx,beneficiary,now),carry=current.active&&existing?.planId===planId?existing.until:0,until=Math.max(now,carry)+plan.durationDays*86_400_000;
+			let subscriptionId;if(existing){subscriptionId=existing._id;await ctx.db.patch(existing._id,{planId,until,paidBy:p.userId,status:'active',renewedAt:now,cancelAtPeriodEnd:false,cancelledAt:undefined,sourcePaymentId:paymentId});}
+			else subscriptionId=await ctx.db.insert('subscriptions', { userId: beneficiary, planId, until, paidBy: p.userId,status:'active',startedAt:now,cancelAtPeriodEnd:false,sourcePaymentId:paymentId });
+			await ctx.scheduler.runAt(until,internal.subscriptions.expire,{id:subscriptionId,expectedUntil:until});
 		}
 		if(p.purpose==='pack'&&p.refId){await ctx.db.insert('purchases',{userId:p.userId,packId:p.refId as Id<'packs'>,paymentId});}
 		if(p.purpose==='cohort'&&p.refId){const cohort=await ctx.db.get(p.refId as Id<'cohorts'>);if(!cohort)throw new ConvexError('Cohort requires reconciliation.');const seats=await ctx.db.query('cohortSeats').withIndex('by_cohort',q=>q.eq('cohortId',cohort._id)).collect();if(seats.length>=cohort.seats&&!seats.some(x=>x.userId===p.userId))throw new ConvexError('Cohort capacity requires reconciliation.');if(!seats.some(x=>x.userId===p.userId))await ctx.db.insert('cohortSeats',{cohortId:cohort._id,userId:p.userId,paymentId});}

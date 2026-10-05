@@ -13,7 +13,7 @@
 	const next = $derived(page.url.searchParams.get('next') || '/home');
 	const safeNext = () => next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : '/home';
 	$effect(() => { if (!auth.isLoading && !auth.isAuthenticated) goto('/login', { replaceState: true }); });
-	$effect(() => { if (profile.data?.ninLast4&&profile.data.state&&profile.data.lga&&profile.data.whatsapp&&!busy) {
+	$effect(() => { if ((profile.data?.roles.includes('staff')||profile.data?.ninLast4&&profile.data.state&&profile.data.lga&&profile.data.whatsapp)&&!busy) {
 	 const ref=page.url.searchParams.get('ref');if(ref&&!referralHandled){referralHandled=true;busy=true;client.action(api.referrals.attach,{code:ref}).then(()=>goto(safeNext(),{replaceState:true})).catch(e=>error=e instanceof Error?e.message:'Referral attribution failed.').finally(()=>busy=false);}else if(!error)goto(safeNext(),{replaceState:true});
 	} });
 	async function complete(event: SubmitEvent) {

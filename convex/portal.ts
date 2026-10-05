@@ -6,6 +6,7 @@ import { rateLimiter } from './rateLimits';
 import { screen } from '../src/lib/engines/integrity';
 import { balance } from './lib/ledger';
 import { attemptAggregate } from './components';
+import { profileIsComplete, requireCapability, entitlement } from './lib/entitlements';
 
 export const profile = query({ args: {}, handler: async ctx => {
 	const identity = await authComponent.safeGetAuthUser(ctx);
@@ -15,16 +16,16 @@ export const profile = query({ args: {}, handler: async ctx => {
 	if (user.status !== 'active') throw new ConvexError('Your account is restricted. Contact support.');
 	const roles = await ctx.db.query('roles').withIndex('by_user', q => q.eq('userId', user._id)).collect();
 	const memberships = await ctx.db.query('tenantMembers').withIndex('by_user', q => q.eq('userId', user._id)).take(100);
-	return { ...user, roles: roles.map(x => x.role), memberships, emailVerified: identity.emailVerified };
+	return { ...user, profileComplete: profileIsComplete(user), roles: roles.map(x => x.role), memberships, emailVerified: identity.emailVerified };
 }});
 
 export const bootstrap = mutation({ args: { isMinor: v.optional(v.boolean()), examTarget: v.optional(v.string()) }, handler: async (ctx, args) => {
 	const identity = await authComponent.safeGetAuthUser(ctx);
 	if (!identity?.emailVerified) throw new ConvexError('Verify your email before continuing.');
 	const existing = await ctx.db.query('users').withIndex('by_authId', q => q.eq('authId', identity._id)).unique();
-	if (existing) return existing._id;
+	if (existing) { if(!profileIsComplete(existing)&&args.isMinor!==undefined)await ctx.db.patch(existing._id,{isMinor:args.isMinor});return existing._id; }
 	const userId = await ctx.db.insert('users', { authId: identity._id, ecosystemId: `schoolxense:${identity._id}`, name: identity.name, email: identity.email,
-		isMinor: args.isMinor ?? true, dailyMinutes: 15, examTarget: args.examTarget ?? 'jamb', referralCode: `SX${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`, creditsDays: 0, streak: 0, status: 'active' });
+		isMinor: args.isMinor ?? true, profileComplete:false, dailyMinutes: 15, examTarget: args.examTarget ?? 'jamb', referralCode: `SX${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`, creditsDays: 0, streak: 0, status: 'active' });
 	await ctx.db.insert('roles', { userId, role: 'learner', grantedAt: Date.now() });
 	const residence=await ctx.db.query('privateIdentities').withIndex('by_authId',q=>q.eq('authId',identity._id)).unique();
 	if(residence)await ctx.db.patch(userId,{state:residence.state,lga:residence.lga,whatsapp:residence.whatsapp,ninLast4:residence.last4});
@@ -68,11 +69,17 @@ export const verifyCertificate=query({args:{code:v.string()},handler:async(ctx,a
 export const workspace = query({ args: { domain: v.string(), tenantId: v.optional(v.id('tenants')) }, handler: async (ctx, { domain, tenantId }) => {
 	const { user } = await resolve(ctx);
 	const id = user._id;
+	if (domain === 'review') await requireCapability(ctx,id,'practice.review');
+	if (domain === 'plan') await requireCapability(ctx,id,'practice.readiness');
+	if (['studio','packs'].includes(domain)) { if(!(await hasRole(ctx,id,'staff'))&&!(await hasRole(ctx,id,'creator')))throw new ConvexError('FORBIDDEN');await requireCapability(ctx,id,'studio.create'); }
+	if (['offers'].includes(domain)) { if(!(await hasRole(ctx,id,'staff'))&&!(await hasRole(ctx,id,'tutor')))throw new ConvexError('FORBIDDEN');await requireCapability(ctx,id,'market.earn'); }
+	if (['teams','contracts','tasks'].includes(domain)) await requireCapability(ctx,id,'collab.earn');
 	const mine = <T extends 'attempts' | 'payments' | 'certificates' | 'payouts' | 'purchases'>(table: T) => ctx.db.query(table).withIndex('by_user' as never, (q: any) => q.eq('userId', id)).order('desc').take(50);
 	if (domain === 'home' || domain === 'practice' || domain === 'review' || domain === 'plan' || domain === 'attempt') {
 		const attempts = await mine('attempts');
 		const mastery = await ctx.db.query('mastery').withIndex('by_user_exam', q => q.eq('userId', id)).take(200);
-		const review = await ctx.db.query('reviewQueue').withIndex('by_user_due', q => q.eq('userId', id).lte('dueAt', Date.now())).take(50);
+		const current=await entitlement(ctx,id),canReview=await hasRole(ctx,id,'staff')||current.capabilities.includes('practice.review');
+		const review = canReview?await ctx.db.query('reviewQueue').withIndex('by_user_due', q => q.eq('userId', id).lte('dueAt', Date.now())).take(50):[];
 		return { attempts, mastery, review, completedSessions:await attemptAggregate.count(ctx,{namespace:id}), certificates: await mine('certificates') };
 	}
 	if (['wallet', 'earn', 'payouts', 'referrals', 'checkout', 'certificates', 'record'].includes(domain)) {
@@ -106,22 +113,22 @@ export const workspace = query({ args: { domain: v.string(), tenantId: v.optiona
 	}
 	if (domain === 'ops') {
 		if (!(await hasRole(ctx, id, 'staff'))) throw new ConvexError('FORBIDDEN');
-		return { questions: await ctx.db.query('questions').withIndex('by_status',q=>q.eq('status','unreviewed')).take(50), users: await ctx.db.query('users').take(100), enquiries: await ctx.db.query('enquiries').order('desc').take(50), reports: await ctx.db.query('reports').order('desc').take(100), tickets:await ctx.db.query('supportTickets').order('desc').take(100), payouts:await ctx.db.query('payouts').order('desc').take(100), ecosystemEvents:await ctx.db.query('ecosystemEvents').order('desc').take(100), referrals:await ctx.db.query('referrals').order('desc').take(100), submissions: await ctx.db.query('studioSubmissions').withIndex('by_status', q => q.eq('status', 'pending')).take(50), audit: await ctx.db.query('auditLog').order('desc').take(50), verifications: await ctx.db.query('verifications').order('desc').take(100), flags: await ctx.db.query('featureFlags').take(50) };
+		return { subscriptions:await ctx.db.query('subscriptions').order('desc').take(100), questions: await ctx.db.query('questions').withIndex('by_status',q=>q.eq('status','unreviewed')).take(50), users: await ctx.db.query('users').take(100), enquiries: await ctx.db.query('enquiries').order('desc').take(50), reports: await ctx.db.query('reports').order('desc').take(100), tickets:await ctx.db.query('supportTickets').order('desc').take(100), payouts:await ctx.db.query('payouts').order('desc').take(100), ecosystemEvents:await ctx.db.query('ecosystemEvents').order('desc').take(100), referrals:await ctx.db.query('referrals').order('desc').take(100), submissions: await ctx.db.query('studioSubmissions').withIndex('by_status', q => q.eq('status', 'pending')).take(50), audit: await ctx.db.query('auditLog').order('desc').take(50), verifications: await ctx.db.query('verifications').order('desc').take(100), flags: await ctx.db.query('featureFlags').take(50) };
 	}
 	if(domain==='settings')return {documents:await ctx.db.query('mediaFiles').withIndex('by_owner',q=>q.eq('ownerId',id)).take(50),tickets:await ctx.db.query('supportTickets').withIndex('by_user',q=>q.eq('userId',id)).order('desc').take(50)};
 	return { documents: await ctx.db.query('mediaFiles').withIndex('by_owner', q => q.eq('ownerId', id)).take(50) };
 }});
 
 export const createOffer = mutation({ args: { title: v.string(), subject: v.string(), priceKobo: v.number(), availability: v.string() }, handler: async (ctx, args) => {
-	const { user } = await resolve(ctx, { role: 'tutor', adultOnly: true });
+	const { user } = await resolve(ctx, { role: 'tutor', adultOnly: true, capability:'market.earn' });
 	if (!Number.isSafeInteger(args.priceKobo) || args.priceKobo < 50000 || args.priceKobo > 100000000 || args.title.trim().length < 5 || args.title.length > 200 || !screen(args.title).allowed) throw new ConvexError('Invalid offer details.');
 	const checks = await ctx.db.query('verifications').withIndex('by_user', q => q.eq('userId', user._id)).collect();
-	if (!checks.some(x => x.kind === 'nin' && x.status === 'approved')) throw new ConvexError('Complete identity verification before publishing paid offers.');
+	if (!(await hasRole(ctx,user._id,'staff')) && !checks.some(x => x.kind === 'nin' && x.status === 'approved')) throw new ConvexError('Complete identity verification before publishing paid offers.');
 	return ctx.db.insert('offers', { tutorId: user._id, title: args.title.trim(), subjects: [args.subject], topics: [], levels: [], languages: ['English'], availability: [args.availability], price: BigInt(args.priceKobo), kind: 'tutoring', module: 'tutors', active: true, minorsApproved: checks.some(x => x.kind === 'safeguarding' && x.status === 'approved'), rating: 0, reviews: 0, completion: 0, sessions: 0 });
 }});
 
 export const createTeam = mutation({ args: { name: v.string(), blurb: v.string() }, handler: async (ctx, args) => {
-	const { user } = await resolve(ctx, { adultOnly: true });
+	const { user } = await resolve(ctx, { adultOnly: true, capability:'collab.earn' });
 	if (args.name.trim().length < 3 || args.name.length > 100 || args.blurb.length > 2000 || !screen(args.blurb).allowed) throw new ConvexError('Invalid team details.');
 	if (!(await hasRole(ctx, user._id, 'teamlead'))) await ctx.db.insert('roles', { userId: user._id, role: 'teamlead', grantedAt: Date.now() });
 	const teamId = await ctx.db.insert('teams', { name: args.name.trim(), leadId: user._id, subjects: [], blurb: args.blurb.trim(), rating: 0 });
