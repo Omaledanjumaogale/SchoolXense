@@ -13,6 +13,12 @@ export const start = withAccess({ role: 'learner' }).mutation({
 	args: { exam: v.string(), subject: v.string(), mode: v.union(v.literal('drill'), v.literal('mock')), topic: v.optional(v.string()), hostedExamId: v.optional(v.id('hostedExams')), clientId: v.optional(v.string()) },
 	handler: async (ctx, a) => {
 		if (a.clientId) { const ex = await ctx.db.query('attempts').withIndex('by_clientId', (q) => q.eq('clientId', a.clientId)).unique(); if (ex) { if (ex.userId !== ctx.user._id) throw new ConvexError('FORBIDDEN'); return ex._id; } }
+		// Timed mocks are a paid feature. Institution-hosted exams are authorized by
+		// tenant membership instead and may be started without a personal subscription.
+		if (a.mode === 'mock' && !a.hostedExamId) {
+			const subscription = await ctx.db.query('subscriptions').withIndex('by_user', q => q.eq('userId', ctx.user._id)).order('desc').first();
+			if (!subscription || subscription.until <= Date.now()) throw new ConvexError('SUBSCRIPTION_REQUIRED');
+		}
 		let queue: Id<'questions'>[] | undefined;
 		if (a.hostedExamId) { const exam = await ctx.db.get(a.hostedExamId); const member = exam && await ctx.db.query('tenantMembers').withIndex('by_tenant_user', q => q.eq('tenantId', exam.tenantId).eq('userId', ctx.user._id)).unique(); if (!exam || !member || exam.status !== 'live') throw new ConvexError('TENANT_FORBIDDEN'); queue = exam.questionIds; }
 		else if (a.mode === 'mock') queue = (await ctx.db.query('questions').withIndex('by_exam_subject_topic', (q) => q.eq('exam', a.exam).eq('subject', a.subject)).take(200)).filter((q) => q.status === 'reviewed').sort(() => Math.random() - 0.5).slice(0, 20).map((q) => q._id);

@@ -19,7 +19,7 @@
 </script>
 <section class="panel p-5 sm:p-7">
 	<div class="flex gap-3 items-center"><Icon name="target" size={22} /><h2 class="text-xl font-semibold">Adaptive practice</h2></div>
-	{#if error}<p role="alert" class="mt-4" style="color:var(--bad)">{error}</p>{/if}
+	{#if error}<p role="alert" class="mt-4" style="color:var(--bad)">{error}</p>{#if error.includes('SUBSCRIPTION_REQUIRED')}<a class="ctl ctl-sm mt-3" href="/pricing">Choose a plan</a>{/if}{/if}
 	{#if !attemptId || result?.grade}
 		{#if result?.grade}<div class="panel-sunk p-4 mt-4" role="status"><p class="num text-3xl font-semibold">{result.pct}% · {result.grade}</p><p class="muted text-sm">Your result and progress have been saved.</p></div>{/if}
 		<form class="grid sm:grid-cols-3 gap-3 mt-5" onsubmit={start}>
