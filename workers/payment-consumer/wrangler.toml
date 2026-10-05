@@ -1,0 +1,36 @@
+name = "schoolxense-payment-consumer"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[queues.consumers]]
+queue = "schoolxense-payment-events"
+max_batch_size = 20
+max_retries = 8
+dead_letter_queue = "schoolxense-payment-dlq"
+
+[vars]
+CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PAYMENTS_ENABLED = "false"
+# secrets: FLW_SECRET_KEY, INTERNAL_WEBHOOK_TOKEN
+
+[env.preview]
+name = "schoolxense-payment-consumer-preview"
+[env.preview.vars]
+CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PAYMENTS_ENABLED = "false"
+[[env.preview.queues.consumers]]
+queue = "schoolxense-payment-events-preview"
+max_batch_size = 20
+max_retries = 8
+dead_letter_queue = "schoolxense-payment-dlq-preview"
+
+[env.production]
+name = "schoolxense-payment-consumer"
+[env.production.vars]
+CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PAYMENTS_ENABLED = "false"
+[[env.production.queues.consumers]]
+queue = "schoolxense-payment-events"
+max_batch_size = 20
+max_retries = 8
+dead_letter_queue = "schoolxense-payment-dlq"

@@ -1,28 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /dashboard
-Disallow: /practice
-Disallow: /tutor
+Disallow: /ops
+Disallow: /inst/
 Disallow: /api/
-
-# Allow AI crawlers for AEO/GEO
-User-agent: GPTBot
-Allow: /
-Allow: /$
-Disallow: /dashboard
-Disallow: /api/
-
-User-agent: ClaudeBot
-Allow: /
-Disallow: /dashboard
-Disallow: /api/
-
-User-agent: PerplexityBot
-Allow: /
-Disallow: /dashboard
-Disallow: /api/
-
-User-agent: Google-Extended
-Allow: /
-
-procee
+Sitemap: https://schoolxense.ewinproject.org/sitemap.xml

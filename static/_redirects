@@ -1,8 +1,0 @@
-# Cloudflare Pages Redirects
-# See: https://developers.cloudflare.com/pages/platform/redirects/
-
-# Redirect www to non-www (uncomment when domain is live)
-# https://www.schoolcbt.ewinproject.org/* https://schoolcbt.ewinproject.org/:splat 301
-
-# Old URL redirects (add as needed)
-# /old-page /new-page 301

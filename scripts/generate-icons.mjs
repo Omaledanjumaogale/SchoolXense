@@ -1,0 +1,7 @@
+import { deflateSync } from 'node:zlib';
+import { writeFileSync } from 'node:fs';
+function crc32(buffer){let crc=0xffffffff;for(const byte of buffer){crc^=byte;for(let j=0;j<8;j++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return(crc^0xffffffff)>>>0;}
+function chunk(type,data){const t=Buffer.from(type),length=Buffer.alloc(4),crc=Buffer.alloc(4);length.writeUInt32BE(data.length);crc.writeUInt32BE(crc32(Buffer.concat([t,data])));return Buffer.concat([length,t,data,crc]);}
+function inside(x,y,points){let result=false;for(let i=0,j=points.length-1;i<points.length;j=i++){const[a,b]=points[i],[c,d]=points[j];if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)result=!result;}return result;}
+for(const size of [192,512]){const raw=Buffer.alloc(size*(size*4+1));for(let y=0;y<size;y++){for(let x=0;x<size;x++){const px=x/size*40,py=y/size*40;let colour=[250,247,240,255];if(inside(px,py,[[20,4],[34,12],[34,28],[20,36],[6,28],[6,12]]))colour=[180,83,9,255];if(inside(px,py,[[11,15],[16,15],[20,17],[24,15],[29,15],[29,26],[24,26],[20,28],[16,26],[11,26]]))colour=[255,255,255,255];if(px>19.6&&px<20.4&&py>17&&py<27.3)colour=[180,83,9,255];const offset=y*(size*4+1)+1+x*4;for(let k=0;k<4;k++)raw[offset+k]=colour[k];}}
+const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(size,0);ihdr.writeUInt32BE(size,4);ihdr[8]=8;ihdr[9]=6;writeFileSync('static/icon-'+size+'.png',Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ihdr),chunk('IDAT',deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]));}

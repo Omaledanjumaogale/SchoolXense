@@ -1,13 +1,8 @@
-import { sveltekit } from '@sveltejs/kit/vite'
-import { defineConfig } from 'vite'
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [sveltekit()],
-  build: {
-    target: 'esnext',
-    minify: 'terser',
-  },
-  optimizeDeps: {
-    include: ['firebase/app', 'firebase/auth'],
-  },
-})
+	plugins: [tailwindcss(), sveltekit()],
+	test: { include: ['tests/unit/**/*.test.ts'], environment: 'node' }
+});

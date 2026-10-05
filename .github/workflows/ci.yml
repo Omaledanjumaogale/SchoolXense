@@ -1,0 +1,68 @@
+name: SchoolXense CI and production
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: schoolxense-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  PUBLIC_APP_URL: https://schoolxense.ewinproject.org
+  PUBLIC_SITE_URL: https://schoolxense.ewinproject.org
+  PUBLIC_CONVEX_URL: https://adjoining-dalmatian-113.eu-west-1.convex.cloud
+  PUBLIC_CONVEX_SITE_URL: https://adjoining-dalmatian-113.eu-west-1.convex.site
+  PUBLIC_DEMO_MODE: 'false'
+  HIVE_DEMO_MODE: 'false'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run check:backend
+      - run: npm test
+      - run: npm audit --audit-level=low
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-results
+          path: test-results/
+  deploy:
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Require deployment credentials
+        run: |
+          test -n "$CONVEX_DEPLOY_KEY"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - run: npm ci
+      - run: npx convex deploy --typecheck enable
+      - run: npm run build
+      - run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch main
+      - run: node scripts/smoke-live.mjs

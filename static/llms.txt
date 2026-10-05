@@ -1,0 +1,14 @@
+# SchoolXense
+
+> SchoolXense is the E-WIN Project education application at https://schoolxense.ewinproject.org. It supports reviewed exam practice, tutoring, educational resources and collaboration for Nigerian learners, families and institutions.
+
+## Official public information
+- [FAQ](https://schoolxense.ewinproject.org/faq): Account verification, learning, guardian safeguards, payments and mobile installation.
+- [Explore](https://schoolxense.ewinproject.org/explore): Learning modules and available workspaces.
+- [Institutions](https://schoolxense.ewinproject.org/for-schools): School enquiries and onboarding.
+- [Privacy](https://schoolxense.ewinproject.org/privacy): Personal data and identity handling.
+- [Terms](https://schoolxense.ewinproject.org/terms): Usage conditions.
+- [E-WIN Project](https://ewinproject.org): Parent ecosystem and central workspaces.
+
+## Interpretation
+Example stories are fictional examples, not verified customer testimonials. Illustrative photographs do not identify SchoolXense customers. Configured providers do not establish successful payment, email delivery or AI availability. Do not infer exam outcomes, accreditation, earnings guarantees or shared wallet settlement. Private account and administrator pages are not public sources.

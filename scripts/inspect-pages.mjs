@@ -1,0 +1,3 @@
+import { loadEnv } from 'vite';
+const env=loadEnv('development',process.cwd(),'');const base='https://api.cloudflare.com/client/v4/accounts/'+env.CLOUDFLARE_ACCOUNT_ID+'/pages/projects';
+for(const path of ['/schoolxense','/schoolxense/domains','?per_page=100']){const response=await fetch(base+path,{headers:{Authorization:'Bearer '+env.CLOUDFLARE_API_TOKEN,'Cache-Control':'no-cache'},signal:AbortSignal.timeout(20000)});const data=await response.json();console.log(JSON.stringify({path,status:response.status,success:data.success,name:data.result?.name,id:data.result?.id,items:Array.isArray(data.result)?data.result.map(x=>({name:x.name,status:x.status})):undefined,errors:data.errors}));}

@@ -1,0 +1,26 @@
+[
+  {
+    "key": "learning-together.webp",
+    "page": "https://unsplash.com/photos/IgUR1iX0mqM",
+    "credit": "Desola Lanre-Ologun / Unsplash",
+    "sourceImage": "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fm=webp&fit=crop&w=1200&q=82",
+    "licence": "https://unsplash.com/license",
+    "bytes": 133550
+  },
+  {
+    "key": "collaboration.webp",
+    "page": "https://unsplash.com/photos/QckxruozjRg",
+    "credit": "Annie Spratt / Unsplash",
+    "sourceImage": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fm=webp&fit=crop&w=1200&q=82",
+    "licence": "https://unsplash.com/license",
+    "bytes": 138464
+  },
+  {
+    "key": "study-community.webp",
+    "page": "https://unsplash.com/photos/g1Kr4Ozfoac",
+    "credit": "Brooke Cagle / Unsplash",
+    "sourceImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fm=webp&fit=crop&w=1200&q=82",
+    "licence": "https://unsplash.com/license",
+    "bytes": 139498
+  }
+]

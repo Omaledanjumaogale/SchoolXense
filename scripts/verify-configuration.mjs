@@ -1,0 +1,5 @@
+import { loadEnv } from 'vite';
+const env=loadEnv('development',process.cwd(),'');const account='https://api.cloudflare.com/client/v4/accounts/'+env.CLOUDFLARE_ACCOUNT_ID;const headers={Authorization:'Bearer '+env.CLOUDFLARE_API_TOKEN};
+const project=await(await fetch(account+'/pages/projects/schoolxense',{headers})).json();
+for(const mode of ['preview','production']){const config=project.result?.deployment_configs?.[mode];console.log(JSON.stringify({mode,variables:Object.keys(config?.env_vars??{}),convexURL:config?.env_vars?.PUBLIC_CONVEX_URL?.value,convexSite:config?.env_vars?.PUBLIC_CONVEX_SITE_URL?.value,r2:config?.r2_buckets,queues:config?.queue_producers,payments:config?.env_vars?.PAYMENTS_ENABLED?.value}));}
+for(const bucket of ['schoolxense-documents','schoolxense-images','schoolxense-documents-preview','schoolxense-images-preview']){const response=await fetch(account+'/r2/buckets/'+bucket+'/domains/managed',{headers});const data=await response.json();console.log(JSON.stringify({bucket,status:response.status,publicAccess:data.result?.enabled??null}));}

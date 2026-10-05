@@ -1,275 +1,43 @@
-# SchoolCBT — Nigeria's Premier AI-Powered CBT Platform
+# SchoolXense
 
-> **Results as a Service** — Multi-agent AI prepares Nigerian students for JAMB, WAEC, NECO & NABTEB with personalized question batches, predictive pass analytics, tutor matching, and automated report cards.
+SchoolXense is the education application at https://schoolxense.ewinproject.org, part of the E-WIN Project ecosystem. This repository replaces the former SchoolCBT implementation while preserving its Git history. Local legacy source and recovery exports remain outside the published application.
 
-[![SvelteKit 5](https://img.shields.io/badge/SvelteKit-5-FF3E00)](https://kit.svelte.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6)](https://typescriptlang.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38BDF8)](https://tailwindcss.com)
-[![Vitest](https://img.shields.io/badge/Tests-37%20passing-50C878)](https://vitest.dev)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+## Stack and live data
 
----
+SvelteKit 2 / Svelte 5, Convex subscriptions and server-enforced access, Convex Better Auth, Cloudflare Pages, private R2 media storage and queue consumers. Production does not use browser persona selection or localStorage as its database. Demo persistence is available only with an explicit PUBLIC_DEMO_MODE=true setting.
 
-## Tech Stack
+## Development and checks
 
-| Layer        | Technology                                                                 |
-| ------------ | -------------------------------------------------------------------------- |
-| Framework    | SvelteKit 5 (Svelte 5 runes — `$state`, `$derived`, `$props`, `$bindable`) |
-| Language     | TypeScript 5.4 strict                                                      |
-| Styling      | Tailwind CSS 3.4 + glassmorphism design system (529-line `app.css`)        |
-| Auth         | Firebase Auth (email/password, OTP, email verification, role-based)        |
-| Real-time DB | Convex (8 tables, typed schema, real-time subscriptions)                   |
-| AI Engine    | Gemini 1.5 Flash via `api/generate/+server.ts`                             |
-| Payments     | Paystack, Stripe, Flutterwave, KoraPay, Seerbit                            |
-| Email        | Resend (transactional: welcome, password reset, payment confirmation)      |
-| Validation   | Zod (runtime type safety on all API endpoints)                             |
-| Testing      | Vitest (37 unit tests) + Playwright (E2E)                                  |
-| Deployment   | Cloudflare Pages via `@sveltejs/adapter-cloudflare`                        |
-| CI/CD        | GitHub Actions (lint → build → deploy → Docker)                            |
+Use Node 22. Run `npm ci`, `npm run dev`. Run `npm run check`, `npm run check:backend`, `npm test`, `npm audit --audit-level=low`, `npm run build`, then `npm run test:e2e`. The browser suite covers desktop Chromium and Pixel 5. `.npmrc` preserves the dependency installation mode used by the lockfile.
 
----
+Copy `.env.example` to ignored `.env.local`. Never commit credentials, export files, or legacy application archives. Public Convex URLs are not deployment secrets. GitHub CI runs checks before its protected production deployment job; the repository default branch is master, and the Pages production branch label is main.
 
-## Quick Start
+## Identity and administration
 
-```bash
-git clone https://github.com/Omaledanjumaogale/SchoolCBT.git
-cd SchoolCBT
-cp .env.example .env.local   # fill in your keys
-npm install --legacy-peer-deps
-npm run dev                   # http://localhost:5173
-```
+Better Auth handles verified email, recovery, Google/GitHub callbacks and sessions. The nominated owner must finish verification and password setup, sign in at `/admin-login`, complete adult profile setup and activate administrator access. Staff visibility derives from trusted backend roles. The verified owner can appoint independent adult staff; appointments and review decisions are audited.
 
-### Scripts
+Signup and profile forms collect state/FCT, dependent LGA, WhatsApp and NIN. NIN is AES-GCM encrypted in a private table using a stable 32-byte hex NIN_ENCRYPTION_KEY configured in Convex; profiles and admin lists receive only its last four digits. Entering a NIN does not verify it. The residence dataset contains 37 state/FCT entries and 774 LGAs, with attribution in docs/DATA-ATTRIBUTION.md.
 
-| Command                 | Purpose                               |
-| ----------------------- | ------------------------------------- |
-| `npm run dev`           | Development server                    |
-| `npm run build`         | Production build (Cloudflare adapter) |
-| `npm run preview`       | Preview production build locally      |
-| `npm run test`          | Run 37 unit tests (Vitest)            |
-| `npm run test:coverage` | Run tests with coverage               |
-| `npm run test:e2e`      | Run Playwright E2E tests              |
-| `npm run lint`          | ESLint + Prettier check               |
-| `npm run format`        | Auto-format all files                 |
+The admin console includes enquiries, support and safety review, identity verification, content decisions, account controls, institution trial onboarding, independent payout approvals, audit records and ecosystem event receipts. `/api/admin/health` requires a staff session and reports database access and provider configuration without revealing credentials or sending billable probes.
 
----
+## Payments and AI
 
-## Project Structure (57 files, 9 routes)
+Orders derive authoritative integer-kobo prices on the server. Client URL statuses cannot settle orders. Flutterwave verification precedes idempotent ledger settlement and workflow fulfilment. PAYMENTS_ENABLED and PAYOUTS_ENABLED remain false until actual provider acceptance is complete; no simulated checkout becomes real credit. AGNES provides structured AI drafts with a Workers AI fallback, authentication, quotas and output validation. Drafts require independent editorial approval before practice publication.
 
-```
-schoolcbt/
-├── src/
-│   ├── app.html                   # HTML shell
-│   ├── app.css                    # 529-line design system
-│   ├── hooks.server.ts            # 7 security headers
-│   ├── routes/
-│   │   ├── +layout.svelte         # Shared layout (Nav, Footer, AuthModals, Toast)
-│   │   ├── +page.svelte           # Landing (55 lines — composes 8 section components)
-│   │   ├── about/+page.svelte     # Mission, story, tech stack
-│   │   ├── pricing/+page.svelte   # Standalone pricing
-│   │   ├── curriculum/+page.svelte # NERDC-aligned exam types
-│   │   ├── practice/+page.svelte  # Full CBT practice engine
-│   │   ├── dashboard/
-│   │   │   ├── +page.svelte       # Student dashboard (Convex queries)
-│   │   │   └── +page.server.ts    # Server-side guard stub
-│   │   ├── tutor/
-│   │   │   ├── +page.svelte       # Tutor dashboard + earnings
-│   │   │   └── +page.server.ts    # Server-side guard stub
-│   │   ├── reset-password/+page.svelte  # Firebase password reset
-│   │   ├── pay/+server.ts         # 5 payment providers
-│   │   └── api/generate/+server.ts # AI question generation
-│   └── lib/
-│       ├── firebase.ts            # Auth + Firestore helpers
-│       ├── convex.ts              # Convex client (singleton, queries, mutations)
-│       ├── email.ts               # Resend service + HTML templates
-│       ├── seo.ts                 # OG meta, JSON-LD schemas
-│       ├── validation.ts          # Zod schemas (PaymentRequest, GenerateQuestions)
-│       ├── plans.ts               # Payment plan config
-│       ├── auth/guard.ts          # requireAuth, requireRole utilities
-│       ├── stores/index.ts        # Auth, CBT, Dashboard, UI stores
-│       ├── utils/grading.ts       # WAEC A1-F9, star ratings
-│       └── components/            # 19 reusable Svelte 5 components
-│           ├── Nav.svelte         # Glass-nav, hamburger, auth-aware
-│           ├── HeroSection.svelte # Hero with CBT panel slot
-│           ├── CBTPanel.svelte    # Reusable CBT question panel
-│           ├── CBTDemo.svelte     # Full interactive CBT demo
-│           ├── FeaturesGrid.svelte # 9-feature grid
-│           ├── HowItWorks.svelte  # Step-by-step + AI agents card
-│           ├── PricingSection.svelte
-│           ├── PricingCard.svelte
-│           ├── FAQSection.svelte  # Accordion FAQ
-│           ├── CTABanner.svelte
-│           ├── SiteFooter.svelte
-│           ├── AuthModals.svelte  # Signup/Login with Firebase
-│           ├── Badge.svelte
-│           ├── ProgressBar.svelte
-│           ├── TimerRing.svelte   # SVG countdown
-│           ├── StatCard.svelte
-│           ├── FeatureCard.svelte
-│           ├── Modal.svelte
-│           ├── Toast.svelte
-│           ├── ErrorBoundary.svelte
-│           ├── LoadingSpinner.svelte
-│           └── EmptyState.svelte
-├── convex/                        # Convex backend (6 query files + schema)
-│   ├── schema.ts                  # 8 tables with typed indexes
-│   ├── users.ts, questions.ts, sessions.ts
-│   ├── analytics.ts, tutors.ts, payments.ts
-│   └── _generated/                # Type stubs
-├── tests/                         # 37 unit tests (Vitest)
-│   ├── validation.test.ts         # 17 tests
-│   ├── grading.test.ts            # 14 tests
-│   └── plans.test.ts              # 6 tests
-├── static/
-│   ├── favicon.svg, og-image.svg
-│   ├── icon-192.svg, icon-512.svg, apple-touch-icon.svg
-│   ├── sitemap.xml, robots.txt
-│   ├── manifest.json, service-worker.js, offline.html
-├── Dockerfile, .dockerignore
-├── .github/workflows/deploy.yml   # CI/CD pipeline
-├── vitest.config.ts, playwright.config.ts
-└── package.json
-```
+## Storage and deployment
 
----
+Wrangler declares Convex HTTP/public URLs, document/image R2 bindings and payment queue bindings consistently for default, preview and production. Buckets remain private. Authenticated uploads receive temporary signed permissions; document downloads check ownership; public photos are served through cached image routes. Preview uses separate media buckets and queues.
 
-## Environment Variables
+GitHub production secrets: CONVEX_DEPLOY_KEY, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN. Provider and internal secrets are configured directly in Convex/Pages. See `.env.example`. Run `node scripts/verify-configuration.mjs` and `node scripts/smoke-live.mjs` after deployment. Provisioning scripts read ignored local environment settings; optional credentials attachment parsing requires CREDENTIALS_ATTACHMENT.
 
-```env
-# Firebase Auth
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
+## E-WIN integration
 
-# Convex (real-time backend)
-VITE_CONVEX_URL=
+SchoolXense owns its settlements. E-WIN receives signed, idempotent reports of onboarding, completed learning, verified payments and credited commissions. These reports cannot post to the central cash ledger. Central referral codes are checked against the live E-WIN registry; established attribution cannot be overwritten. Users can connect through the origin-restricted E-WIN frame, read their central code and consent to private learning-record copies. Accounts and roles remain separate until proof of both accounts is implemented. See docs/EWIN-INTEGRATION-CONTRACT.md.
 
-# AI Generation
-GEMINI_API_KEY=
+## Public experience
 
-# Payments
-PAYSTACK_SECRET_KEY=
-FLUTTERWAVE_SECRET_KEY=
-KORAPAY_SECRET_KEY=
-SEERBIT_SECRET_KEY=
-SEERBIT_PUBLIC_KEY=
-STRIPE_SECRET_KEY=
+Landing photography is real licensed illustrative imagery, outside the hero. Example stories are labelled until consented customer testimonials are published. FAQ, enquiries, canonical URLs, organization/FAQ structured data, sitemap, robots and llms.txt support discovery. The installable PWA caches public assets and an offline reconnect screen; it excludes private account, API and payment content.
 
-# Email (Resend)
-VITE_RESEND_API_KEY=
+## Acceptance boundaries
 
-# App
-PUBLIC_APP_URL=https://schoolcbt.ewinproject.org
-```
-
----
-
-## API Reference
-
-### `POST /api/generate` — Generate AI Questions
-
-Body (validated by Zod):
-
-```json
-{
-  "subject": "Physics",
-  "examType": "WAEC",
-  "count": 5,
-  "topics": ["Mechanics"],
-  "difficulty": "Medium"
-}
-```
-
-Response: `{ questions: Question[], source: "gemini"|"static-fallback" }`
-
-### `POST /pay` — Initiate Payment
-
-Body (validated by Zod):
-
-```json
-{
-  "plan": "student-single",
-  "uid": "abc123",
-  "email": "user@example.com",
-  "currency": "NGN",
-  "provider": "flutterwave"
-}
-```
-
-Supports: `paystack`, `stripe`, `flutterwave`, `korapay`, `seerbit`
-
-### `GET /pay?reference=REF&provider=paystack` — Verify Payment
-
----
-
-## Testing
-
-```bash
-npm run test           # 37 tests, 3 files, 100% pass
-npm run test:coverage  # With v8 coverage
-npm run test:e2e       # Playwright (Chromium, Firefox, mobile)
-```
-
-**Coverage:** Zod validation (17 tests), WAEC grading (14 tests), payment plans (6 tests)
-
----
-
-## Convex Backend Schema
-
-| Table       | Purpose                      | Key Indexes                         |
-| ----------- | ---------------------------- | ----------------------------------- |
-| `users`     | Student/tutor profiles       | `by_uid`, `by_role`, `by_email`     |
-| `questions` | AI-generated question bank   | `by_subject`, `by_exam`, `by_topic` |
-| `sessions`  | CBT practice sessions        | `by_uid`, `by_uid_subject`          |
-| `analytics` | Aggregated performance stats | `by_uid`                            |
-| `tutors`    | Tutor profiles + earnings    | `by_uid`, `by_subject`              |
-| `earnings`  | Tutor payment records        | `by_tutor`, `by_status`             |
-| `payments`  | Payment transactions         | `by_uid`, `by_reference`            |
-| `approvals` | Admin verification queue     | `by_uid`, `by_status`               |
-
----
-
-## Design System (Tailwind + Custom CSS)
-
-**Colors:** `cobalt` (#002366), `jade` (#50C878), `gold` (#FFD700), `scarlet` (#DC3545)
-**Glassmorphism:** `.glass`, `.glass-card`, `.glass-deep`, `.glass-nav`
-**Buttons:** `.btn-primary`, `.btn-gold`, `.btn-outline`, `.btn-ghost`
-**Cards:** `.feature-card`, `.stat-card`, `.pricing-card`, `.wallet-card`
-**Typography:** Sora (headings), DM Sans (body), JetBrains Mono (code/scores)
-
----
-
-## Docker
-
-```bash
-docker build -t schoolcbt .
-docker run -p 4173:4173 schoolcbt
-```
-
-Multi-stage build (node:20-alpine), non-root user, port 4173.
-
----
-
-## Deployment
-
-**Cloudflare Pages** (configured via `wrangler.toml`):
-
-```bash
-npm run build
-npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolcbt
-```
-
-Or push to `master` — GitHub Actions CI/CD handles lint → build → deploy automatically.
-
----
-
-## Made in Nigeria 🇳🇬
-
-Built with ❤️ in Lagos, Nigeria.
-
-> _"Every Nigerian student deserves guaranteed exam results — not just access to past questions."_
-
-**Website:** https://schoolcbt.ewinproject.org
+Configured credentials do not prove successful OAuth provider journeys, inbox delivery, AI generation or payment settlement. Owner verification needs the recipient. OAuth dashboard callbacks must allow the canonical `/api/auth/callback/google` and `/api/auth/callback/github` URLs. The Cloudflare zone currently has its five custom WAF rules allocated; no unrelated rule has been removed to add a SchoolXense rule. Payment acceptance, provider journeys and new financial flows must be exercised before enabling collection/payouts.

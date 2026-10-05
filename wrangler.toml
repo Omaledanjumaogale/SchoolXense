@@ -1,24 +1,74 @@
-name = "schoolcbt"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
+# SchoolXense Cloudflare Pages. Secrets are set through the Cloudflare API or Pages dashboard.
+name = "schoolxense"
 pages_build_output_dir = ".svelte-kit/cloudflare"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
-PUBLIC_APP_NAME = "SchoolCBT"
-PUBLIC_APP_URL = "https://schoolcbt.ewinproject.org"
+PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_CONVEX_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.cloud"
+PUBLIC_CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_CONVEX_HTTP_ACTIONS_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_DEMO_MODE = "false"
+HIVE_DEMO_MODE = "false"
+PAYMENTS_ENABLED = "false"
+APP_ENV = "production"
 
-# KV Namespaces (uncomment and add IDs when created)
-# [[kv_namespaces]]
-# binding = "SESSIONS"
-# id = "YOUR_KV_NAMESPACE_ID"
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "schoolxense-documents"
 
-# D1 Database (uncomment when created)
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "schoolcbt"
-# database_id = "YOUR_D1_DATABASE_ID"
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "schoolxense-images"
 
-# R2 Bucket (uncomment when created)
-# [[r2_buckets]]
-# binding = "UPLOADS"
-# bucket_name = "schoolcbt-uploads"
+[[queues.producers]]
+binding = "PAYMENT_EVENTS"
+queue = "schoolxense-payment-events"
+
+[env.preview.vars]
+PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_CONVEX_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.cloud"
+PUBLIC_CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_CONVEX_HTTP_ACTIONS_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_DEMO_MODE = "false"
+HIVE_DEMO_MODE = "false"
+PAYMENTS_ENABLED = "false"
+APP_ENV = "preview"
+
+[[env.preview.r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "schoolxense-documents-preview"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "schoolxense-images-preview"
+
+[[env.preview.queues.producers]]
+binding = "PAYMENT_EVENTS"
+queue = "schoolxense-payment-events-preview"
+
+[env.production.vars]
+PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
+PUBLIC_CONVEX_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.cloud"
+PUBLIC_CONVEX_SITE_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_CONVEX_HTTP_ACTIONS_URL = "https://adjoining-dalmatian-113.eu-west-1.convex.site"
+PUBLIC_DEMO_MODE = "false"
+HIVE_DEMO_MODE = "false"
+PAYMENTS_ENABLED = "false"
+APP_ENV = "production"
+
+[[env.production.r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "schoolxense-documents"
+
+[[env.production.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "schoolxense-images"
+
+[[env.production.queues.producers]]
+binding = "PAYMENT_EVENTS"
+queue = "schoolxense-payment-events"
