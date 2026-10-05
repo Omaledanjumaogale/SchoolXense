@@ -17,7 +17,7 @@ async function sendEmail(to: string, subject: string, url: string) {
 export const createAuth = (ctx: GenericCtx<DataModel>) => betterAuth({
 	appName: 'SchoolXense', baseURL: process.env.SITE_URL ?? 'https://schoolxense.ewinproject.org',
 	secret: process.env.BETTER_AUTH_SECRET, database: authComponent.adapter(ctx),
-	trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? 'https://schoolxense.ewinproject.org,http://127.0.0.1:5173,http://localhost:5173').split(',').map(x => x.trim()),
+	trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? 'https://schoolxense.ewinproject.org,https://*.schoolxense.pages.dev,http://127.0.0.1:5173,http://localhost:5173').split(',').map(x => x.trim()),
 	emailAndPassword: { enabled: true, requireEmailVerification: true, minPasswordLength: 12,
 		sendResetPassword: async ({ user, url }) => sendEmail(user.email, 'Reset your SchoolXense password', url), revokeSessionsOnPasswordReset: true },
 	emailVerification: { sendOnSignUp: true, sendOnSignIn: true, autoSignInAfterVerification: false,

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { hive } from '$hive/store.svelte';
+	import { DEMO_MODE } from '$lib/config';
+	import { useQuery } from 'convex-svelte';
+	import { api } from '$convex/_generated/api';
 	import { MODULES } from '$hive/catalogue';
 	import { ui } from './ui.svelte';
 	import Icon from './Icon.svelte';
@@ -14,7 +17,8 @@
 		{ kind: 'Go', label: 'Wallet', sub: 'Balance, escrow, payouts', href: '/wallet' },
 		{ kind: 'Go', label: 'Settings', sub: 'Profile, privacy, data saver', href: '/settings' }
 	];
-	const results = $derived(q.trim() ? [...hive.search(q), ...MODULES.filter((m) => m.name.toLowerCase().includes(q.toLowerCase())).map((m) => ({ kind: 'Module', label: m.name, sub: m.tagline, href: m.appHref }))] : quick);
+	const liveSearch=useQuery(api.portal.searchCatalogue,()=>!DEMO_MODE&&ui.paletteOpen&&q.trim().length>=2?{q:q.trim().slice(0,80)}:'skip');
+	const results = $derived(q.trim() ? [...(DEMO_MODE?hive.search(q):liveSearch.data??[]), ...MODULES.filter((m) => m.name.toLowerCase().includes(q.toLowerCase())).map((m) => ({ kind: 'Module', label: m.name, sub: m.tagline, href: m.appHref }))] : quick);
 	$effect(() => { if (ui.paletteOpen) { q = ''; idx = 0; setTimeout(() => input?.focus(), 10); } });
 	function key(e: KeyboardEvent) {
 		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); ui.paletteOpen = !ui.paletteOpen; }

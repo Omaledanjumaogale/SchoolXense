@@ -54,6 +54,16 @@ export const catalogue = query({ args: { kind: v.union(v.literal('offers'), v.li
 
 export const offers = query({ args: {}, handler: ctx=>ctx.db.query('offers').withIndex('by_active_kind',q=>q.eq('active',true)).take(50) });
 export const testimonials = query({ args: {}, handler: ctx=>ctx.db.query('testimonials').withIndex('by_approved',q=>q.eq('approved',true)).take(12) });
+export const searchCatalogue=query({args:{q:v.string()},handler:async(ctx,a)=>{
+ const text=a.q.trim().toLowerCase();if(text.length<2||text.length>80)return [];
+ const offers=await ctx.db.query('offers').withSearchIndex('search_title',q=>q.search('title',text).eq('active',true)).take(8);
+ const packs=(await ctx.db.query('packs').withIndex('by_status',q=>q.eq('status','live')).take(100)).filter(x=>x.title.toLowerCase().includes(text)).slice(0,4);
+ return [...offers.map(x=>({kind:'Tutor',label:x.title,sub:x.subjects.join(', '),href:'/book'})),...packs.map(x=>({kind:'Library',label:x.title,sub:x.subject,href:`/library/${x.slug}`}))];
+}});
+export const verifyCertificate=query({args:{code:v.string()},handler:async(ctx,a)=>{
+ const code=a.code.trim().toUpperCase();if(!/^(SX|SH)-C-[A-Z0-9]{6,32}$/.test(code))return null;
+ const record=await ctx.db.query('certificates').withIndex('by_code',q=>q.eq('code',code)).unique();if(!record)return null;const owner=await ctx.db.get(record.userId);return {code:record.code,title:record.title,pct:record.pct,grade:record.grade,issuedAt:record.issuedAt,holder:owner?.name??'Learner'};
+}});
 
 export const workspace = query({ args: { domain: v.string(), tenantId: v.optional(v.id('tenants')) }, handler: async (ctx, { domain, tenantId }) => {
 	const { user } = await resolve(ctx);

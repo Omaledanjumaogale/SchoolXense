@@ -87,7 +87,7 @@ export const finish = withAccess().mutation({
 		await ctx.db.patch(attemptId, { endedAt: Date.now(), pct, grade });
 		await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'learning.completed',subject:ctx.user.ecosystemId??`schoolxense:${ctx.user._id}`,payload:{version:1,recordId:attemptId,exam:at.exam,subject:at.subject,pct,referralCode:ctx.user.centralReferralCode},createdAt:Date.now()});
 		await attemptAggregate.insert(ctx,(await ctx.db.get(attemptId))!);
-		if (at.mode === 'mock' && pct >= 70) await ctx.db.insert('certificates', { userId: ctx.user._id, title: `${at.exam.toUpperCase()} ${at.subject} — Mock`, pct, grade, code: 'SH-C-' + Math.random().toString(36).slice(2, 8).toUpperCase(), module: 'secondary', issuedAt: Date.now() });
+		if (at.mode === 'mock' && pct >= 70) await ctx.db.insert('certificates', { userId: ctx.user._id, title: `${at.exam.toUpperCase()} ${at.subject} — Mock`, pct, grade, code: 'SX-C-' + crypto.randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase(), module: 'secondary', issuedAt: Date.now() });
 		return { pct, grade };
 	}
 });

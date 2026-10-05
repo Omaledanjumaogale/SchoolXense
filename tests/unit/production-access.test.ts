@@ -48,6 +48,7 @@ describe('Generated content validation',()=>{
  test('rejects malformed answer keys, duplicate options and excess output',()=>{expect(()=>validateQuestions([{...q,answer:9}])).toThrow();expect(()=>validateQuestions([{...q,options:['A','A','B','C']}])).toThrow();expect(()=>validateQuestions([q,q],1)).toThrow();expect(()=>parseQuestions('not json',1)).toThrow();});
 });
 describe('Profiles and administrative review',()=>{
+ test('certificate verification uses persisted records and excludes private identity',async()=>{const t=convexTest(schema,modules),id=await account(t,'learner');await t.run(ctx=>ctx.db.insert('certificates',{userId:id,title:'Physics mock',pct:80,grade:'A1',code:'SX-C-1234567890ABCDE',module:'secondary',issuedAt:Date.now()}));const result=await t.query(api.portal.verifyCertificate,{code:'sx-c-1234567890abcde'});expect(result?.holder).toBe('learner');expect(result).not.toHaveProperty('email');expect(await t.query(api.portal.verifyCertificate,{code:'SX-C-NOTFOUND'})).toBeNull();});
  test('contains all state/FCT and LGA entries and validates the dependent selection',()=>{
  expect(Object.keys(nigeria)).toHaveLength(37);expect(Object.values(nigeria).flat()).toHaveLength(774);
  expect(residence('Lagos','Ikeja','08012345678').whatsapp).toBe('+2348012345678');

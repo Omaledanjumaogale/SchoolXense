@@ -5,7 +5,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 export default {
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: adapter({ routes: { include: ['/*'], exclude: ['<all>'] } }),
+		adapter: adapter({ routes: { include: ['/*'], exclude: ['<all>'] },platformProxy:{persist:false} }),
 		alias: {
 			$convex: './convex',
 			$ui: 'src/lib/ui',
@@ -22,7 +22,7 @@ export default {
 				'img-src': ['self', 'data:', 'blob:', 'https:'],
 				'font-src': ['self', 'data:'],
 				'connect-src': ['self', 'https://*.convex.cloud', 'wss://*.convex.cloud', 'https://*.convex.site', 'https://api.flutterwave.com'],
-				'frame-src': ['https://checkout.flutterwave.com', 'https://challenges.cloudflare.com'],
+				'frame-src': ['https://checkout.flutterwave.com', 'https://challenges.cloudflare.com', 'https://ewinproject.org'],
 				'frame-ancestors': ['none'],
 				'base-uri': ['self'],
 				'form-action': ['self', 'https://checkout.flutterwave.com']

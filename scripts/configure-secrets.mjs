@@ -14,7 +14,7 @@ const domainResponse=await fetch('https://api.resend.com/domains',{headers:{Auth
 const domains=await domainResponse.json();const verified=domains.data?.find(x=>x.name==='ewinproject.org'&&x.status==='verified');
 console.log('Email sender domain lookup:',domainResponse.status, verified?'ewinproject.org verified':'No verified ewinproject.org sender found');
 if(verified&&!env.RESEND_FROM){env.RESEND_FROM='SchoolXense <accounts@ewinproject.org>';appendFileSync('.env.local','\nRESEND_FROM="'+env.RESEND_FROM+'"\n');}
-const settings={SITE_URL:'https://schoolxense.ewinproject.org',AUTH_TRUSTED_ORIGINS:'https://schoolxense.ewinproject.org,http://127.0.0.1:5173,http://localhost:5173',PAYMENTS_ENABLED:'false',PAYOUTS_ENABLED:'false'};
+const settings={SITE_URL:'https://schoolxense.ewinproject.org',AUTH_TRUSTED_ORIGINS:'https://schoolxense.ewinproject.org,https://*.schoolxense.pages.dev,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173',PAYMENTS_ENABLED:'false',PAYOUTS_ENABLED:'false'};
 for(const name of ['BETTER_AUTH_SECRET','INTERNAL_WEBHOOK_TOKEN','RESEND_API_KEY','RESEND_FROM','SUPER_ADMIN_EMAIL','AGNES_AI_KEY','AGNES_AI_BASE_URL','AGNES_AI_MODEL','CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_AI_TOKEN','GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GITHUB_CLIENT_ID','GITHUB_CLIENT_SECRET'])if(env[name])settings[name]=env[name];
 for(const [name,value] of Object.entries(settings)){
  if(process.argv[2]&&name!==process.argv[2])continue;

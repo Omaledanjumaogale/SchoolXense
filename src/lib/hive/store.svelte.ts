@@ -73,6 +73,7 @@ export class HiveError extends Error {
 
 /* ───────────────────────────── seed + history ───────────────────────────── */
 function freshDB(): DB {
+	if(!DEMO_MODE)return {version:3,mastery:{},...Object.fromEntries(['users','questions','attempts','reviewQueue','offers','bookings','payments','escrows','ledger','payouts','cohorts','packs','purchases','briefs','submissions','teams','contracts','tasks','threads','messages','tenants','hostedExams','proctorEvents','invoices','notifications','integrityFlags','reports','tickets','referrals','certificates','consents','flags','audit','verifications'].map(key=>[key,[]]))} as DB;
 	const now = Date.now();
 	const db: DB = {
 		version: 3,
