@@ -30,11 +30,15 @@ test('server routes reject anonymous mutations, cross-origin writes and invalid 
 test('PWA only caches public assets and declares installable icons',async({request})=>{
  const manifest=await(await request.get('/manifest.webmanifest')).json();expect(manifest.name).toBe('SchoolXense');
  for(const icon of manifest.icons){const response=await request.get(icon.src);expect(response.status()).toBe(200);expect(response.headers()['content-type']).toContain('image/png');}
- const sw=await(await request.get('/sw.js')).text();expect(sw).toContain("url.pathname.startsWith('/api/')");expect(sw).toContain('/offline.html');
+	const offline=await request.get('/offline');expect(offline.status()).toBe(200);
+	const sw=await(await request.get('/sw.js')).text();expect(sw).toContain("url.pathname.startsWith('/api/')");expect(sw).toContain("OFFLINE_URL = '/offline'");
 });
 test('signup residence dropdowns and identity visibility work on desktop and mobile',async({page,request})=>{
- await page.goto('/signup');const state=page.getByLabel('State of residence');expect(await state.locator('option').count()).toBe(38);
- await state.selectOption('Lagos');const lga=page.getByLabel('LGA of residence');await lga.selectOption('Ikeja');await state.selectOption('Abia');await expect(lga).toHaveValue('');await expect(lga.locator('option')).toHaveCount(18);
- await expect(page.getByLabel('WhatsApp contact')).toBeVisible();await page.getByRole('button',{name:'Show NIN',exact:true}).click();await expect(page.getByLabel('NIN',{exact:true})).toHaveAttribute('type','text');
+ await page.goto('/signup');const nin=page.getByLabel('NIN',{exact:true});const toggle=page.getByRole('button',{name:'Show NIN',exact:true});
+ await expect.poll(async()=>{if(await nin.getAttribute('type')==='password')await toggle.click();return nin.getAttribute('type');}).toBe('text');
+ const state=page.getByLabel('State of residence');expect(await state.locator('option').count()).toBe(38);
+ const lga=page.getByLabel('LGA of residence');await expect.poll(async()=>{if(!(await lga.isEnabled()))await state.selectOption('Lagos');return lga.isEnabled();}).toBe(true);
+ await lga.selectOption('Ikeja');await state.selectOption('Abia');await expect(lga).toHaveValue('');await expect(lga.locator('option')).toHaveCount(18);
+ await expect(page.getByLabel('WhatsApp contact')).toBeVisible();
  expect((await request.get('/api/admin/health')).status()).toBe(401);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
