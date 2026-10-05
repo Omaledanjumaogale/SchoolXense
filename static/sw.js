@@ -1,6 +1,7 @@
 // Cache public assets only. Account pages and API responses must stay on the network.
-const VERSION = 'schoolxense-public-v2';
-const SHELL = ['/offline.html', '/favicon.svg', '/manifest.webmanifest'];
+const VERSION = 'schoolxense-public-v3';
+const OFFLINE_URL = '/offline';
+const SHELL = [OFFLINE_URL, '/favicon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
@@ -20,6 +21,6 @@ self.addEventListener('fetch', (event) => {
       return response;
     })));
   } else if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('/offline.html')));
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
   }
 });
