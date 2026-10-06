@@ -17,10 +17,13 @@ export const createInstitution=mutation({args:{name:v.string(),slug:v.string(),s
 }});
 export const health=query({args:{},handler:async ctx=>{
  await resolve(ctx,{role:'staff'});await ctx.db.query('featureFlags').first();
+ const run=await ctx.db.query('aiRuns').withIndex('by_time').order('desc').first();
+ const bundlePolicy=await ctx.db.query('tutorBundlePolicy').withIndex('by_key',q=>q.eq('key','current')).unique();
  return {checkedAt:Date.now(),database:{status:'connected',detail:'Authenticated Convex database query succeeded.'},
- ai:{status:process.env.AGNES_AI_KEY?'configured':'missing',detail:'AGNES primary; provider availability has not been probed.',fallbackConfigured:!!(process.env.CLOUDFLARE_AI_TOKEN&&process.env.CLOUDFLARE_ACCOUNT_ID)},
+ ai:{status:process.env.AGNES_AI_KEY?'configured':'missing',detail:run?`Last live generation ${run.status} via ${run.provider} (${run.model}); ${run.stored} validated drafts stored at ${new Date(run.checkedAt).toISOString()}. ${run.primaryFailed?(run.provider==='workers_ai'?'AGNES failed; Workers AI fallback attempted.':'AGNES failed; fallback unavailable.'):''}`:'AGNES primary; no live generation result recorded.',fallbackConfigured:!!(process.env.CLOUDFLARE_AI_TOKEN&&process.env.CLOUDFLARE_ACCOUNT_ID),lastRun:run?{status:run.status,provider:run.provider,model:run.model,stored:run.stored,checkedAt:run.checkedAt,durationMs:run.durationMs,primaryFailed:run.primaryFailed}:null},
  email:{status:process.env.RESEND_API_KEY&&process.env.RESEND_FROM?'configured':'missing',detail:'Resend verification and recovery. Delivery requires recipient confirmation.'},
  payments:{status:process.env.PAYMENTS_ENABLED==='true'&&process.env.FLW_SECRET_KEY?'configured':'disabled',detail:'Server-priced orders and provider verification; disabled until payment acceptance checks pass.'},
+ tutoring:{status:bundlePolicy?.enabled?'enabled':'awaiting_approval',detail:bundlePolicy?`Session budget approved: ${Number(bundlePolicy.sessionKobo)/100} NGN before Hive Share. Tutor capacity and payment activation are separate checks.`:'Compensation is unset. An administrator must approve the policy and verified tutor capacity before bundle purchases.'},
  identity:{status:process.env.NIN_ENCRYPTION_KEY?'configured':'missing',detail:'Private AES-GCM identity storage.'},
  ecosystem:{status:process.env.EWIN_SYNC_ENABLED==='true'?'enabled':'opt_in',detail:'E-WIN connection supports member-authorized record imports. Cash settlement is separate.'}};
 }});

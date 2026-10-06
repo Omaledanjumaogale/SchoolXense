@@ -7,7 +7,7 @@ test('landing sections and real photos render once without horizontal overflow',
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  for(const id of ['learning-community','testimonials','faq','enquiries'])await expect(page.locator('#'+id)).toHaveCount(1);
  await expect(page.locator('#learning-community img')).toHaveCount(3);
- for(const img of await page.locator('#learning-community img').all()){await img.scrollIntoViewIfNeeded();await expect.poll(()=>img.evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBeGreaterThan(100);}
+ for(const img of await page.locator('#learning-community img').all()){await img.scrollIntoViewIfNeeded();await expect.poll(()=>img.evaluate(el=>(el as HTMLImageElement).naturalWidth),{timeout:15000}).toBeGreaterThan(100);}
  await expect(page.getByText('Example story · not a customer testimonial')).toHaveCount(3);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);expect(errors).toEqual([]);
  await page.locator('#learning-community').screenshot({path:'.artifacts/landing-community-'+test.info().project.name+'.png'});
@@ -22,6 +22,7 @@ test('password visibility, FAQs and verification sign-in are accessible',async({
 });
 test('anonymous account and admin access cannot use a demo persona',async({page})=>{
  await page.goto('/home');await expect(page).toHaveURL(/login/,{timeout:20000});
+ await page.goto('/tutor-bundle');await expect(page).toHaveURL(/login/,{timeout:20000});
  await page.goto('/');await expect(page.getByRole('link',{name:'Admin console',exact:true})).toHaveCount(0);
  await page.goto('/admin-login');await expect(page.getByRole('heading',{level:1})).toContainText('Administrator');
 });

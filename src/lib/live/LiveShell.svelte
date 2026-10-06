@@ -15,7 +15,7 @@
 	let open = $state(false);
 	const nav = [
 		{ label: 'Overview', href: '/home', icon: 'home' }, { label: 'Practice', href: '/practice', icon: 'target' }, { label: 'Study plan', href: '/plan', icon: 'calendar' },
-		{ label: 'Find a tutor', href: '/book', icon: 'users' }, { label: 'Sessions', href: '/sessions', icon: 'video' }, { label: 'Wallet', href: '/wallet', icon: 'wallet' },
+		{ label: 'Find a tutor', href: '/book', icon: 'users' }, { label: 'Tutor bundle', href: '/tutor-bundle', icon: 'calendar' }, { label: 'Sessions', href: '/sessions', icon: 'video' }, { label: 'Wallet', href: '/wallet', icon: 'wallet' },
 		{ label: 'Studio', href: '/studio', icon: 'pen' }, { label: 'Teams', href: '/teams', icon: 'handoff' }, { label: 'Contracts', href: '/contracts', icon: 'briefcase' },
 		{ label: 'Tasks', href: '/tasks', icon: 'kanban' }, { label: 'Messages', href: '/threads', icon: 'message' }, { label: 'Family', href: '/family', icon: 'heart' },
 		{ label: 'Certificates', href: '/certificates', icon: 'badge' }, { label: 'Settings', href: '/settings', icon: 'settings' }

@@ -24,6 +24,8 @@ The admin console includes enquiries, support and safety review, identity verifi
 
 Orders derive authoritative integer-kobo prices on the server. Client URL statuses cannot settle orders. Flutterwave verification precedes idempotent ledger settlement and workflow fulfilment. PAYMENTS_ENABLED and PAYOUTS_ENABLED remain false until actual provider acceptance is complete; no simulated checkout becomes real credit. AGNES provides structured AI drafts with a Workers AI fallback, authentication, quotas and output validation. Drafts require independent editorial approval before practice publication.
 
+Plus + Tutor includes a durable six-credit allocation and scheduling workspace at `/tutor-bundle`, also embedded in the Admin Console. Staff approve compensation and verified tutor capacity; compensation starts unset. Purchases reserve session funds, and reports, draft feedback, guardian consent and disputes are enforced on the backend. See [tutor bundle operations](docs/TUTOR-BUNDLE.md). Admin health retains actual AI generation results separately from configured credentials; the live-check button and `scripts/verify-live-ai.mjs` deliberately request one real unreviewed draft.
+
 ## Storage and deployment
 
 Wrangler declares Convex HTTP/public URLs, document/image R2 bindings and payment queue bindings consistently for default, preview and production. Buckets remain private. Authenticated uploads receive temporary signed permissions; document downloads check ownership; public photos are served through cached image routes. Preview uses separate media buckets and queues.
