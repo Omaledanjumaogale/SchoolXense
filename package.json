@@ -49,6 +49,7 @@
     "convex-svelte": "^0.14.0"
   },
   "overrides": {
+    "sharp": "0.35.5",
     "@sveltejs/kit": {
       "cookie": "0.7.2"
     }
