@@ -12,6 +12,7 @@ import type { Id } from './_generated/dataModel';
 import { workflows } from './components';
 import { planById } from '../src/lib/payments/plans';
 import { entitlement } from './lib/entitlements';
+import { createBundle, SESSION_COUNT } from './lib/tutorBundle';
 
 const KIND: Record<string, TxnKind> = { booking: 'session', cohort: 'session', pack: 'pack', contract: 'collab', subscription: 'subscription', exam_pass: 'subscription', invoice: 'licence' };
 const ESCROWED = new Set(['booking', 'cohort', 'contract']);
@@ -33,7 +34,10 @@ export const settlePayment = internalMutation({
 		await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'payment.verified',subject:payer?.ecosystemId??`schoolxense:${p.userId}`,payload:{version:1,orderId:p._id,txRef:p.txRef,providerTransactionId:a.flwTxId,amountKobo:p.amount.toString(),currency:p.currency,purpose:p.purpose,referralCode:payer?.centralReferralCode},createdAt:Date.now()});
 
 		const recipients = await recipientsFor(ctx, p);
-		const s = split({ kind: KIND[p.purpose] ?? 'session', grossKobo: Number(p.amount), hasReferrer: !!recipients.referrer, hasCollabPartner: !!recipients.collab });
+		const isBundle=p.purpose==='subscription'&&p.refId?.startsWith('plus_tutor:');
+		const reserve=isBundle?(p.bundleSessionKobo??0n)*BigInt(SESSION_COUNT):0n;
+		if(isBundle&&(reserve<=0n||reserve>=p.amount))throw new ConvexError('Bundle compensation requires reconciliation.');
+		const s = split({ kind: KIND[p.purpose] ?? 'session', grossKobo: Number(p.amount-reserve), hasReferrer: !!recipients.referrer, hasCollabPartner: !!recipients.collab });
 		const txn = `settle:${a.flwTxId}`;
 		const clearing = await systemWallet(ctx, 'clearing');
 		if (ESCROWED.has(p.purpose)) {
@@ -41,7 +45,8 @@ export const settlePayment = internalMutation({
 			await post(ctx, txn, [{ walletId: clearing, amount: -p.amount, kind: 'clearing', memo: p.txRef }, { walletId: escrow, amount: p.amount, kind: 'escrow', memo: `Held: ${p.purpose}` }], p._id);
 			await ctx.db.insert('escrows', { paymentId: p._id, refKind: p.purpose === 'contract' ? 'milestone' : p.purpose, refId: p.refId!, amount: p.amount, currency: p.currency, status: 'held', releaseAfter: Date.now() + 30 * 86_400_000, split: s, recipients });
 		} else {
-			await post(ctx, txn, [{ walletId: clearing, amount: -p.amount, kind: 'clearing', memo: p.txRef }, ...(await sliceRows(ctx, s, recipients, p.purpose))], p._id);
+			await post(ctx, txn, [{ walletId: clearing, amount: -p.amount, kind: 'clearing', memo: p.txRef }, ...(await sliceRows(ctx, s, recipients, p.purpose)),...(reserve?[{walletId:await systemWallet(ctx,'escrow'),amount:reserve,kind:'escrow',memo:'Six tutor bundle credits'}]:[])], p._id);
+			if(isBundle)for(let ordinal=1;ordinal<=SESSION_COUNT;ordinal++)await ctx.db.insert('escrows',{paymentId:p._id,refKind:'tutor_bundle',refId:`bundle:${p._id}:${ordinal}`,amount:p.bundleSessionKobo!,currency:p.currency,status:'held',releaseAfter:Date.now()+90*86400000,split:split({kind:'session',grossKobo:Number(p.bundleSessionKobo),hasReferrer:false,hasCollabPartner:false}),recipients:{}});
 		}
 		await workflows.start(ctx, internal.components.fulfilPayment, { paymentId: p._id });
 		return { ok: true };
@@ -90,6 +95,7 @@ export const afterPayment = internalMutation({
 			let subscriptionId;if(existing){subscriptionId=existing._id;await ctx.db.patch(existing._id,{planId,until,paidBy:p.userId,status:'active',renewedAt:now,cancelAtPeriodEnd:false,cancelledAt:undefined,sourcePaymentId:paymentId});}
 			else subscriptionId=await ctx.db.insert('subscriptions', { userId: beneficiary, planId, until, paidBy: p.userId,status:'active',startedAt:now,cancelAtPeriodEnd:false,sourcePaymentId:paymentId });
 			await ctx.scheduler.runAt(until,internal.subscriptions.expire,{id:subscriptionId,expectedUntil:until});
+			if(planId==='plus_tutor')await createBundle(ctx,p,beneficiary);
 		}
 		if(p.purpose==='pack'&&p.refId){await ctx.db.insert('purchases',{userId:p.userId,packId:p.refId as Id<'packs'>,paymentId});}
 		if(p.purpose==='cohort'&&p.refId){const cohort=await ctx.db.get(p.refId as Id<'cohorts'>);if(!cohort)throw new ConvexError('Cohort requires reconciliation.');const seats=await ctx.db.query('cohortSeats').withIndex('by_cohort',q=>q.eq('cohortId',cohort._id)).collect();if(seats.length>=cohort.seats&&!seats.some(x=>x.userId===p.userId))throw new ConvexError('Cohort capacity requires reconciliation.');if(!seats.some(x=>x.userId===p.userId))await ctx.db.insert('cohortSeats',{cohortId:cohort._id,userId:p.userId,paymentId});}
@@ -105,6 +111,8 @@ export const releaseEscrow = internalMutation({
 	handler: async (ctx, { escrowId }) => {
 		const e = await ctx.db.get(escrowId);
 		if (!e || e.status !== 'held') return;
+		const payment=await ctx.db.get(e.paymentId);if(payment?.status!=='successful'||!payment.fulfilledAt)throw new ConvexError('SETTLED_PAYMENT_REQUIRED');
+		if(e.refKind==='tutor_bundle'&&!e.recipients.earner)throw new ConvexError('TUTOR_ALLOCATION_REQUIRED');
 		const escrow = await systemWallet(ctx, 'escrow');
 		let rows = await sliceRows(ctx, e.split, e.recipients, `${e.refKind} released`);
 		if (e.refKind === 'cohort') {

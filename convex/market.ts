@@ -24,6 +24,8 @@ export const create = withAccess({ role: 'learner' }).mutation({
 		if(!tutor||tutor.status!=='active'||(!staff&&(!profileIsComplete(tutor)||!(await hasRole(ctx,o.tutorId,'tutor')))))throw new ConvexError('OFFER_UNAVAILABLE');
 		await requireCapability(ctx,o.tutorId,'market.earn');
 		if (!Number.isInteger(a.minutes) || a.minutes < 15 || a.minutes > 180 || !Number.isFinite(Date.parse(a.slot)) || Date.parse(a.slot) < Date.now() || a.topic.trim().length < 2 || a.topic.length > 120 || (a.note?.length ?? 0)>2000 || o.tutorId===ctx.user._id) throw new ConvexError('Invalid booking details.');
+		const bundles=await ctx.db.query('tutorBundleSessions').withIndex('by_tutor_start',q=>q.eq('tutorId',o.tutorId)).collect();
+		if(bundles.some(s=>s.startsAt&&['scheduled','under_review','disputed'].includes(s.status)&&s.startsAt<Date.parse(a.slot)+a.minutes*60000&&s.startsAt+45*60000>Date.parse(a.slot)))throw new ConvexError('SLOT_ALREADY_RESERVED');
 		const verdict = screen(`${a.topic} ${a.note ?? ''}`);
 		if (!verdict.allowed) {
 			await ctx.db.insert('integrityFlags', { userId: ctx.user._id, text: a.note ?? a.topic, reasons: verdict.reasons, source: 'booking', status: 'open' });

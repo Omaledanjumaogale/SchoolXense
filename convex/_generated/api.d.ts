@@ -24,6 +24,7 @@ import type * as lib_access from "../lib/access.js";
 import type * as lib_entitlements from "../lib/entitlements.js";
 import type * as lib_ledger from "../lib/ledger.js";
 import type * as lib_profileValidation from "../lib/profileValidation.js";
+import type * as lib_tutorBundle from "../lib/tutorBundle.js";
 import type * as market from "../market.js";
 import type * as media from "../media.js";
 import type * as money from "../money.js";
@@ -34,6 +35,7 @@ import type * as referrals from "../referrals.js";
 import type * as studio from "../studio.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as trust from "../trust.js";
+import type * as tutorBundles from "../tutorBundles.js";
 import type * as users from "../users.js";
 
 import type {
@@ -59,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "lib/entitlements": typeof lib_entitlements;
   "lib/ledger": typeof lib_ledger;
   "lib/profileValidation": typeof lib_profileValidation;
+  "lib/tutorBundle": typeof lib_tutorBundle;
   market: typeof market;
   media: typeof media;
   money: typeof money;
@@ -69,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   studio: typeof studio;
   subscriptions: typeof subscriptions;
   trust: typeof trust;
+  tutorBundles: typeof tutorBundles;
   users: typeof users;
 }>;
 
