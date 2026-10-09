@@ -79,8 +79,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Check isolated preview availability
+        id: preview
+        run: |
+          if [ -n "$CONVEX_DEPLOY_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Preview deployment is unavailable until CONVEX_PREVIEW_DEPLOY_KEY is configured. Production credentials are never used for previews."
+          fi
       - run: npm ci
-      - name: Require isolated Convex preview key
-        run: test -n "$CONVEX_DEPLOY_KEY"
+        if: steps.preview.outputs.enabled == 'true'
       - name: Deploy isolated preview backend
+        if: steps.preview.outputs.enabled == 'true'
         run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable
