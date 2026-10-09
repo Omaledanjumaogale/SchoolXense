@@ -1,5 +1,5 @@
 import { writeFile, readFile } from 'node:fs/promises';
-const vars = {
+const productionVars = {
 	PUBLIC_APP_URL: 'https://schoolxense.ewinproject.org', PUBLIC_SITE_URL: 'https://schoolxense.ewinproject.org',
 	PUBLIC_CONVEX_URL: 'https://adjoining-dalmatian-113.eu-west-1.convex.cloud',
 	PUBLIC_CONVEX_SITE_URL: 'https://adjoining-dalmatian-113.eu-west-1.convex.site',
@@ -10,6 +10,7 @@ let toml = '# SchoolXense Cloudflare Pages. Secrets are set through the Cloudfla
 for (const name of ['', 'preview', 'production']) {
 	const prefix = name ? `env.${name}.` : '';
 	toml += `\n[${prefix}vars]\n`;
+	const vars=name==='preview'?{...productionVars,PUBLIC_CONVEX_URL:'https://preview-isolation-required.invalid',PUBLIC_CONVEX_SITE_URL:'https://preview-isolation-required.invalid',PUBLIC_CONVEX_HTTP_ACTIONS_URL:'https://preview-isolation-required.invalid'}:productionVars;
 	for (const [key, value] of Object.entries({ ...vars, APP_ENV: name || 'production' })) toml += `${key} = ${JSON.stringify(value)}\n`;
 	for (const [binding, bucket] of [['DOCUMENTS', 'schoolxense-documents'], ['IMAGES', 'schoolxense-images']]) toml += `\n[[${prefix}r2_buckets]]\nbinding = "${binding}"\nbucket_name = "${bucket}${name === 'preview' ? '-preview' : ''}"\n`;
 	toml += `\n[[${prefix}queues.producers]]\nbinding = "PAYMENT_EVENTS"\nqueue = "schoolxense-payment-events${name === 'preview' ? '-preview' : ''}"\n`;

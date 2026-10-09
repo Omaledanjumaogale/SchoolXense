@@ -66,3 +66,21 @@ jobs:
       - run: npm run build
       - run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch main
       - run: node scripts/smoke-live.mjs
+  preview-backend:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Require isolated Convex preview key
+        run: test -n "$CONVEX_DEPLOY_KEY"
+      - name: Deploy isolated preview backend
+        run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable

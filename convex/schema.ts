@@ -21,7 +21,9 @@ export default defineSchema({
 	enquiries: defineTable({ name: v.string(), email: v.string(), organisation: v.optional(v.string()), topic: v.string(), message: v.string(), status: v.union(v.literal('new'), v.literal('in_progress'), v.literal('closed')), createdAt: v.number() }).index('by_status', ['status']),
 	testimonials: defineTable({ name: v.string(), role: v.string(), quote: v.string(), approved: v.boolean(), example: v.boolean() }).index('by_approved', ['approved']),
 	mediaFiles: defineTable({ key: v.string(), ownerId: v.id('users'), kind: v.union(v.literal('image'), v.literal('document')), contentType: v.string(), size: v.number(), createdAt: v.number() }).index('by_key', ['key']).index('by_owner', ['ownerId']),
-	ecosystemEvents: defineTable({ eventId: v.string(), app: v.literal('schoolxense'), type: v.string(), subject: v.string(), payload: v.any(), createdAt: v.number(), deliveredAt: v.optional(v.number()) }).index('by_eventId', ['eventId']).index('by_delivery', ['deliveredAt']),
+	ecosystemEvents: defineTable({ eventId: v.string(), app: v.literal('schoolxense'), type: v.string(), subject: v.string(), payload: v.any(), createdAt: v.number(), deliveredAt: v.optional(v.number()), attempts:v.optional(v.number()),nextAttemptAt:v.optional(v.number()),lastError:v.optional(v.string()),quarantinedAt:v.optional(v.number()) }).index('by_eventId', ['eventId']).index('by_delivery', ['deliveredAt']),
+	paidQuestionUsage:defineTable({questionId:v.id('questions'),authorId:v.id('users'),month:v.string(),serves:v.number()}).index('by_month',['month']).index('by_month_question',['month','questionId']),
+	royaltyRuns:defineTable({month:v.string(),amount:kobo,closedAt:v.number()}).index('by_month',['month']),
 
 	/* ── 1. Identity ─────────────────────────────────────────────── */
 	users: defineTable({
@@ -29,11 +31,11 @@ export default defineSchema({
 		name: v.string(), email: v.optional(v.string()), phone: v.optional(v.string()), image: v.optional(v.string()),
 		isMinor: v.boolean(), state: v.optional(v.string()), lga:v.optional(v.string()), whatsapp:v.optional(v.string()),ninLast4:v.optional(v.string()), institution: v.optional(v.string()), level: v.optional(v.string()),
 		examTarget: v.optional(v.string()), examDate: v.optional(v.number()), dailyMinutes: v.number(),
-		referralCode: v.string(), centralReferralCode:v.optional(v.string()), referredBy: v.optional(v.id('users')), creditsDays: v.number(),
+		referralCode: v.string(), centralReferralCode:v.optional(v.string()), centralUserId:v.optional(v.string()), centralLinkId:v.optional(v.string()), centralLinkedAt:v.optional(v.number()), referredBy: v.optional(v.id('users')), creditsDays: v.number(),
 		slug: v.optional(v.string()), headline: v.optional(v.string()), bio: v.optional(v.string()), languages: v.optional(v.array(v.string())),
 		streak: v.number(), lastActiveDay: v.optional(v.string()), status: v.union(v.literal('active'), v.literal('suspended'), v.literal('paused')),
 		profileComplete: v.optional(v.boolean()), legacyUid: v.optional(v.string()), // Firebase uid, kept 90 days for linking
-	}).index('by_authId', ['authId']).index('email', ['email']).index('phone', ['phone']).index('by_slug', ['slug']).index('by_referralCode', ['referralCode']).index('by_legacyUid', ['legacyUid'])
+	}).index('by_authId', ['authId']).index('email', ['email']).index('phone', ['phone']).index('by_slug', ['slug']).index('by_referralCode', ['referralCode']).index('by_centralUserId', ['centralUserId']).index('by_legacyUid', ['legacyUid'])
 		.searchIndex('search_name', { searchField: 'name' }),
 	roles: defineTable({ userId: v.id('users'), role, grantedBy: v.optional(v.id('users')), grantedAt: v.number() }).index('by_user', ['userId']).index('by_user_role', ['userId', 'role']),
 	guardianLinks: defineTable({ guardianId: v.id('users'), childId: v.id('users'), spendingLimit: kobo, createdAt: v.number() }).index('by_guardian', ['guardianId']).index('by_child', ['childId']),
@@ -90,10 +92,11 @@ export default defineSchema({
 	cohorts: defineTable({ hostId: v.id('users'), title: v.string(), exam: v.string(), subject: v.string(), startsAt: v.number(), weeks: v.number(), seats: v.number(), price: kobo, schedule: v.string(), module: moduleId, description: v.string(), minorsAllowed: v.boolean() }).index('by_host', ['hostId']).index('by_start', ['startsAt']),
 	cohortSeats: defineTable({ cohortId: v.id('cohorts'), userId: v.id('users'), paymentId: v.id('payments') }).index('by_cohort', ['cohortId']).index('by_user', ['userId']),
 	reviews: defineTable({ bookingId: v.id('bookings'), offerId: v.id('offers'), rating: v.number(), text: v.string() }).index('by_offer', ['offerId']),
-	disputes: defineTable({ bookingId: v.id('bookings'), openedBy: v.id('users'), reason: v.string(), status: v.union(v.literal('open'), v.literal('refunded'), v.literal('released')), decidedBy: v.optional(v.id('users')) }).index('by_status', ['status']),
+	disputes: defineTable({ bookingId: v.id('bookings'), openedBy: v.id('users'), reason: v.string(), status: v.union(v.literal('open'),v.literal('under_review'),v.literal('refund_pending'), v.literal('refunded'), v.literal('released')), decidedBy: v.optional(v.id('users')),decisionNote:v.optional(v.string()) }).index('by_status', ['status']),
+	refundRequests:defineTable({disputeId:v.id('disputes'),paymentId:v.id('payments'),status:v.union(v.literal('queued'),v.literal('submitting'),v.literal('pending'),v.literal('reconciliation'),v.literal('refunded')),providerId:v.optional(v.string()),lastError:v.optional(v.string()),createdAt:v.number()}).index('by_status',['status']).index('by_dispute',['disputeId']),
 
 	/* ── 7. Library & Studio ─────────────────────────────────────── */
-	packs: defineTable({ authorId: v.id('users'), slug: v.string(), title: v.string(), subject: v.string(), exam: v.string(), kind: v.string(), price: kobo, pages: v.number(), status: v.union(v.literal('draft'), v.literal('checking'), v.literal('live'), v.literal('rejected')), preview: v.array(v.string()), version: v.number(), fileId: v.optional(v.id('_storage')), rating: v.float64(), sales: v.number() }).index('by_slug', ['slug']).index('by_author', ['authorId']).index('by_status', ['status']),
+	packs: defineTable({ authorId: v.id('users'), slug: v.string(), title: v.string(), subject: v.string(), exam: v.string(), kind: v.string(), price: kobo, pages: v.number(), status: v.union(v.literal('draft'), v.literal('checking'), v.literal('live'), v.literal('rejected')), preview: v.array(v.string()), version: v.number(), fileId: v.optional(v.id('_storage')),mediaKey:v.optional(v.string()), rating: v.float64(), sales: v.number() }).index('by_slug', ['slug']).index('by_author', ['authorId']).index('by_status', ['status']),
 	packVersions: defineTable({ packId: v.id('packs'), version: v.number(), fileId: v.id('_storage') }).index('by_pack', ['packId']),
 	purchases: defineTable({ userId: v.id('users'), packId: v.id('packs'), paymentId: v.id('payments'), tenantId: v.optional(v.id('tenants')) }).index('by_user', ['userId']).index('by_pack', ['packId']),
 	studioBriefs: defineTable({ kind: v.string(), exam: v.string(), subject: v.string(), topic: v.string(), needed: v.number(), reward: kobo, language: v.optional(v.string()), deadline: v.number(), open: v.boolean() }).index('by_open', ['open']),

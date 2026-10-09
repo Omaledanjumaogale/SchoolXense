@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { DEMO_MODE } from '$lib/config';
+	import LivePack from '$lib/live/LivePack.svelte';
 	import { goto } from '$app/navigation';
 	import { hive } from '$hive/store.svelte';
 	import { ui } from '$ui/ui.svelte';
@@ -8,8 +10,8 @@
 	import Stars from '$ui/Stars.svelte';
 	import HiveShare from '$ui/HiveShare.svelte';
 	let { data } = $props();
-	const p = $derived(hive.db.packs.find((x) => x.id === data.packId)!);
-	const a = $derived(hive.user(p.authorId)!);
+	const p = $derived(DEMO_MODE?hive.db.packs.find((x) => x.id === data.packId)!:null as never);
+	const a = $derived(DEMO_MODE?hive.user(p.authorId)!:null as never);
 	const owned = $derived(!!ui.me && hive.db.purchases.some((x) => x.userId === ui.me!.id && x.packId === p.id));
 	function buy() {
 		if (!ui.me) { goto(`/login?next=/library/${p.slug}`); return; }
@@ -17,9 +19,9 @@
 		if (pay) goto(`/checkout/${pay.id}`);
 	}
 </script>
+<svelte:head><title>{DEMO_MODE ? `${p.title} · SchoolXense Library` : 'SchoolXense Library · Study packs'}</title></svelte:head>
 
-<svelte:head><title>{p.title} · Hive Library</title></svelte:head>
-
+{#if !DEMO_MODE}<LivePack slug={data.slug}/>{:else}
 <section class="max-w-[1100px] mx-auto px-4 sm:px-6 pt-10 grid lg:grid-cols-[1.5fr_1fr] gap-6" data-module="library">
 	<div class="flex flex-col gap-5">
 		<a href="/library" class="link text-sm inline-flex items-center gap-1"><Icon name="arrow-left" size={14} />Library</a>
@@ -46,3 +48,4 @@
 		<div class="panel p-5"><p class="eyebrow mb-3">Where your money goes</p><HiveShare kind="pack" grossKobo={p.priceKobo} referrer={!!a.referredBy} /></div>
 	</aside>
 </section>
+{/if}

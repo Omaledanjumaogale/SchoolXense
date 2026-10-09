@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { authenticatedClient } from '$lib/server/convex';
 import { api } from '$convex/_generated/api';
 export const GET: RequestHandler = async event=>{
- const file=await authenticatedClient(event).query(api.media.get,{key:event.params.key});
+ const file=await authenticatedClient(event).query(api.media.purchasedDocument,{key:event.params.key});
  if(file.kind!=='document') error(404,'Document not found.');
  const object=await event.platform?.env?.DOCUMENTS?.get(file.key);
  if(!object) error(404,'Document not found.');

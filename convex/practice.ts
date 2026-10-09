@@ -90,8 +90,9 @@ export const answer = withAccess().mutation({
 		if (rq) await ctx.db.patch(rq._id, sm2(rq, quality));
 		else if (!correct) await ctx.db.insert('reviewQueue', { userId: ctx.user._id, questionId: q._id, ...sm2(newCard(), quality) });
 		const stats = await ctx.db.query('questionStats').withIndex('by_question', (x) => x.eq('questionId', q._id)).unique();
-		if (stats) await ctx.db.patch(stats._id, { served: stats.served + 1, correct: stats.correct + (correct ? 1 : 0) });
-		else await ctx.db.insert('questionStats', { questionId: q._id, served: 1, servedPaying: 0, correct: correct ? 1 : 0 });
+		if (stats) await ctx.db.patch(stats._id, { served: stats.served + 1, servedPaying:stats.servedPaying+(current.active?1:0), correct: stats.correct + (correct ? 1 : 0) });
+		else await ctx.db.insert('questionStats', { questionId: q._id, served: 1, servedPaying:current.active?1:0, correct: correct ? 1 : 0 });
+		if(current.active&&q.authorId){const month=new Date(Date.now()).toISOString().slice(0,7);const usage=await ctx.db.query('paidQuestionUsage').withIndex('by_month_question',x=>x.eq('month',month).eq('questionId',q._id)).unique();if(usage)await ctx.db.patch(usage._id,{serves:usage.serves+1});else await ctx.db.insert('paidQuestionUsage',{questionId:q._id,authorId:q.authorId,month,serves:1});}
 		return at.mode === 'mock' ? { correct: null } : { correct, answer: q.answer, explanation: q.explanation };
 	}
 });
@@ -107,6 +108,8 @@ export const finish = withAccess().mutation({
 		const grade = waecGrade(pct).grade;
 		await ctx.db.patch(attemptId, { endedAt: Date.now(), pct, grade });
 		await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'learning.completed',subject:ctx.user.ecosystemId??`schoolxense:${ctx.user._id}`,payload:{version:1,recordId:attemptId,exam:at.exam,subject:at.subject,pct,referralCode:ctx.user.centralReferralCode},createdAt:Date.now()});
+		const completed=(await ctx.db.query('attempts').withIndex('by_user',q=>q.eq('userId',ctx.user._id)).collect()).filter(x=>x._id!==attemptId&&x.endedAt&&x.exam===at.exam&&x.subject===at.subject);const total=completed.reduce((sum,x)=>sum+(x.pct??0),0)+pct;
+		await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'performance.updated',subject:ctx.user.ecosystemId??`schoolxense:${ctx.user._id}`,payload:{version:1,exam:at.exam,subject:at.subject,attempts:completed.length+1,averagePct:Math.round(total/(completed.length+1)),lastCompletedAt:Date.now(),referralCode:ctx.user.centralReferralCode},createdAt:Date.now()});
 		await attemptAggregate.insert(ctx,(await ctx.db.get(attemptId))!);
 		if (at.mode === 'mock' && pct >= 70) await ctx.db.insert('certificates', { userId: ctx.user._id, title: `${at.exam.toUpperCase()} ${at.subject} — Mock`, pct, grade, code: 'SX-C-' + crypto.randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase(), module: 'secondary', issuedAt: Date.now() });
 		return { pct, grade };

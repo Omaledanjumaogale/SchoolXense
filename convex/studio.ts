@@ -48,17 +48,19 @@ async function hash(s: string) {
 export const computeMonthly = internalMutation({
 	args: {},
 	handler: async (ctx) => {
+		const now=new Date(Date.now()),period=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1));
+		const month=period.toISOString().slice(0,7);
+		if(await ctx.db.query('royaltyRuns').withIndex('by_month',q=>q.eq('month',month)).unique())return;
 		const pool = await systemWallet(ctx, 'royalty_pool');
-		const amount = await balance(ctx, pool);
+		const end=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1);
+		const funding=await ctx.db.query('ledgerEntries').withIndex('by_wallet',q=>q.eq('walletId',pool)).collect();
+		const earned=funding.filter(e=>e.amount>0n&&e.createdAt>=period.getTime()&&e.createdAt<end).reduce((n,e)=>n+e.amount,0n);
+		const available=await balance(ctx,pool),amount=earned<available?earned:available;
 		if (amount <= 0n) return;
 		const serves = new Map<string, number>();
-		for await (const st of ctx.db.query('questionStats')) {
-			const q = await ctx.db.get(st.questionId);
-			if (q?.authorId && q.status === 'reviewed') serves.set(q.authorId, (serves.get(q.authorId) ?? 0) + st.servedPaying);
-		}
+		for(const st of await ctx.db.query('paidQuestionUsage').withIndex('by_month',q=>q.eq('month',month)).collect())serves.set(st.authorId,(serves.get(st.authorId)??0)+st.serves);
 		const total = [...serves.values()].reduce((a, b) => a + b, 0);
 		if (!total) return;
-		const month = new Date().toISOString().slice(0, 7);
 		let paid = 0n;
 		const rows = [];
 		for (const [author, n] of serves) {
@@ -68,6 +70,7 @@ export const computeMonthly = internalMutation({
 			await ctx.db.insert('questionRoyalties', { authorId: author as never, month, serves: n, amount: amt });
 		}
 		await post(ctx, `royalties:${month}`, [{ walletId: pool, amount: -paid, kind: 'royalty', memo: `Royalty run ${month}` }, ...rows]);
+		await ctx.db.insert('royaltyRuns',{month,amount:paid,closedAt:Date.now()});
 	}
 });
 

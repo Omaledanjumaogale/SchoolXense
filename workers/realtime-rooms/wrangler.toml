@@ -1,6 +1,10 @@
 name = "schoolxense-realtime-rooms"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"
+workers_dev = false
+
+[vars]
+ROOMS_ENABLED = "false"
 
 [[durable_objects.bindings]]
 name = "ROOMS"

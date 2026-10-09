@@ -5,6 +5,7 @@ import { withAccess, audit, hasRole } from './lib/access';
 import { requireCapability, profileIsComplete } from './lib/entitlements';
 import { screen } from '../src/lib/engines/integrity';
 import { rank } from '../src/lib/engines/matching';
+import { eligibleTutor, reserveSlot } from './lib/bookingEligibility';
 
 export const match = withAccess().query({
 	args: { subject: v.optional(v.string()), topic: v.optional(v.string()), kind: v.optional(v.string()), language: v.optional(v.string()), budgetKobo: v.optional(v.number()) },
@@ -20,12 +21,9 @@ export const create = withAccess({ role: 'learner' }).mutation({
 	handler: async (ctx, a) => {
 		const o = await ctx.db.get(a.offerId);
 		if (!o || !o.active) throw new ConvexError('OFFER_UNAVAILABLE');
-		const tutor=await ctx.db.get(o.tutorId),staff=await hasRole(ctx,o.tutorId,'staff');
-		if(!tutor||tutor.status!=='active'||(!staff&&(!profileIsComplete(tutor)||!(await hasRole(ctx,o.tutorId,'tutor')))))throw new ConvexError('OFFER_UNAVAILABLE');
-		await requireCapability(ctx,o.tutorId,'market.earn');
+		await eligibleTutor(ctx,o,ctx.user.isMinor);
 		if (!Number.isInteger(a.minutes) || a.minutes < 15 || a.minutes > 180 || !Number.isFinite(Date.parse(a.slot)) || Date.parse(a.slot) < Date.now() || a.topic.trim().length < 2 || a.topic.length > 120 || (a.note?.length ?? 0)>2000 || o.tutorId===ctx.user._id) throw new ConvexError('Invalid booking details.');
-		const bundles=await ctx.db.query('tutorBundleSessions').withIndex('by_tutor_start',q=>q.eq('tutorId',o.tutorId)).collect();
-		if(bundles.some(s=>s.startsAt&&['scheduled','under_review','disputed'].includes(s.status)&&s.startsAt<Date.parse(a.slot)+a.minutes*60000&&s.startsAt+45*60000>Date.parse(a.slot)))throw new ConvexError('SLOT_ALREADY_RESERVED');
+		await reserveSlot(ctx,o,Date.parse(a.slot),a.minutes);
 		const verdict = screen(`${a.topic} ${a.note ?? ''}`);
 		if (!verdict.allowed) {
 			await ctx.db.insert('integrityFlags', { userId: ctx.user._id, text: a.note ?? a.topic, reasons: verdict.reasons, source: 'booking', status: 'open' });
@@ -50,8 +48,9 @@ export const deliver = withAccess({ role: 'tutor', adultOnly: true }).mutation({
 	args: { bookingId: v.id('bookings') },
 	handler: async (ctx, { bookingId }) => {
 		const b = (await ctx.db.get(bookingId))!;
-		if (b.tutorId !== ctx.user._id) throw new ConvexError('FORBIDDEN');
+		if (!b || b.tutorId !== ctx.user._id) throw new ConvexError('FORBIDDEN');
 		if (b.status !== 'confirmed') throw new ConvexError('Only a paid, confirmed booking can be delivered.');
+		if(Date.now()<Date.parse(b.slot)+b.minutes*60000)throw new ConvexError('SESSION_NOT_FINISHED');
 		await ctx.db.patch(bookingId, { status: 'delivered', deliveredAt: Date.now() });
 		const e = await ctx.db.query('escrows').withIndex('by_ref', (q) => q.eq('refId', bookingId)).unique();
 		if (e) await ctx.db.patch(e._id, { releaseAfter: Date.now() + 48 * 3_600_000 }); // 48h dispute window; silence = confirmation
@@ -96,6 +95,8 @@ export const handoff = withAccess({ role: 'tutor', adultOnly: true }).mutation({
 		if(!to?.active||b.status!=='confirmed'||to.tutorId===ctx.user._id)throw new ConvexError('Invalid handoff.');
 		const learner = (await ctx.db.get(b.learnerId))!;
 		if (learner.isMinor && !to.minorsApproved) throw new ConvexError('MINOR_SAFETY');
+		await eligibleTutor(ctx,to,learner.isMinor);
+		await reserveSlot(ctx,to,Date.parse(b.slot),b.minutes,b._id);
 		await ctx.db.patch(b._id, { tutorId: to.tutorId, offerId: to._id, handoffFrom: ctx.user._id });
 		if(b.threadId){const thread=await ctx.db.get(b.threadId);if(thread)await ctx.db.patch(thread._id,{participants:[...new Set(thread.participants.filter(x=>x!==ctx.user._id).concat(to.tutorId))]});}
 		await ctx.db.insert('handoffs', { bookingId: b._id, fromId: ctx.user._id, toId: to.tutorId });
