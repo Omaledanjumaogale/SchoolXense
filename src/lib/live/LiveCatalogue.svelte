@@ -4,12 +4,14 @@
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import type {FunctionReturnType} from 'convex/server';
 	import { naira } from '$ui/format';
 	import Icon from '$ui/Icon.svelte';
 	const client = useConvexClient(), auth = useAuth();
 	const kind = $derived<'offers' | 'packs' | 'cohorts'>(page.url.pathname.startsWith('/tutors') ? 'offers' : page.url.pathname.startsWith('/library') ? 'packs' : 'cohorts');
 	const catalogue = useQuery(api.portal.catalogue, () => ({ kind }));
-	const items = $derived((catalogue.data ?? []).filter((item): item is Exclude<typeof item, {quote:string}> => 'title' in item));
+	const initial=$derived((page.data.catalogue??[]) as FunctionReturnType<typeof api.portal.catalogue>);
+	const items = $derived((catalogue.data ?? initial).filter((item): item is Exclude<typeof item, {quote:string}> => 'title' in item));
 	let error = $state(''), busy = $state(false);
 	async function buy(id: string) {
 		if (!auth.isAuthenticated) { await goto(`/login?next=${encodeURIComponent(page.url.pathname)}`); return; }

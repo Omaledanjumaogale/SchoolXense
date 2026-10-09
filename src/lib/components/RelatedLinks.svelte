@@ -1,0 +1,2 @@
+<script lang="ts">let {links}:{links:{title:string;url:string}[]}=$props();</script>
+<nav aria-label="Related information" class="panel p-5"><h2 id="related-information" class="font-semibold">Where can I learn more?</h2><ul class="grid gap-3 mt-3">{#each links as link}<li><a class="link" href={link.url}>{link.title}</a></li>{/each}<li><a class="link" href="https://ewinproject.org/ecosystem">Explore the E-WIN ecosystem</a></li></ul></nav>

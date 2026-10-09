@@ -14,5 +14,5 @@ export const privatePath=(path:string)=>/^\/(api|admin|auth|ops|inst|login|signu
 export function buildMeta(path:string,override?:Partial<PageSEO>):PageSEO {
  const normalized=path==='/'?'/':path.replace(/\/$/,'');const entry=PUBLIC_PAGES[normalized];
  const title=entry?.title??`${normalized.split('/').filter(Boolean).map(s=>s.replaceAll('-',' ')).join(' · ')} · SchoolXense`;
- return {title,description:entry?.description??'Official SchoolXense information, learning services and educational resources in the E-WIN Project ecosystem.',canonical:SITE+normalized,robots:privatePath(normalized)?'noindex,nofollow':'index,follow',image:SITE+'/icon-512.png',graph:'',...override};
+ return {title,description:entry?.description??'Official SchoolXense information, learning services and educational resources in the E-WIN Project ecosystem.',canonical:SITE+normalized,robots:privatePath(normalized)?'noindex,nofollow':'index,follow',image:SITE+'/social-card.png',graph:'',...override};
 }
