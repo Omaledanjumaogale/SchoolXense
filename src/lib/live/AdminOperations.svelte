@@ -4,6 +4,7 @@
  import type { Doc } from '$convex/_generated/dataModel';
  import { states } from '$lib/data/nigeria';
  import TutorBundles from './TutorBundles.svelte';
+ import WorkflowQueues from './WorkflowQueues.svelte';
  let {tickets=[],reports=[],payouts=[],events=[]}:{tickets?:Doc<'supportTickets'>[];reports?:Doc<'reports'>[];payouts?:Doc<'payouts'>[];events?:Doc<'ecosystemEvents'>[]}=$props();
  const client=useConvexClient(),health=useQuery(api.admin.health,{});
  let busy=$state(false),error=$state(''),notice=$state(''),notes=$state<Record<string,string>>({});
@@ -24,3 +25,4 @@
  <section class="panel p-5"><h2 class="text-xl font-semibold">E-WIN event delivery</h2><p class="text-sm muted mt-2">Events await a signed central receipt. Delivery records do not create wallet credits.</p><div class="grid gap-2 mt-4">{#each events as event}<div class="panel-sunk p-3 flex flex-wrap justify-between gap-3"><span class="text-sm break-all">{event.type} · {event.subject}</span><span class="badge">{event.deliveredAt?'Acknowledged':'Awaiting central receipt'}</span></div>{:else}<p class="muted">No queued ecosystem events.</p>{/each}</div></section>
 </div>
 <TutorBundles/>
+<WorkflowQueues {events}/>

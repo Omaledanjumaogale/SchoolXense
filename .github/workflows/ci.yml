@@ -66,3 +66,30 @@ jobs:
       - run: npm run build
       - run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch main
       - run: node scripts/smoke-live.mjs
+  preview-backend:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check isolated preview availability
+        id: preview
+        run: |
+          if [ -n "$CONVEX_DEPLOY_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Preview deployment is unavailable until CONVEX_PREVIEW_DEPLOY_KEY is configured. Production credentials are never used for previews."
+          fi
+      - run: npm ci
+        if: steps.preview.outputs.enabled == 'true'
+      - name: Deploy isolated preview backend
+        if: steps.preview.outputs.enabled == 'true'
+        run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable

@@ -3,7 +3,7 @@ import { v, ConvexError } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { resolve, hasRole, audit } from './lib/access';
-import { policy, eligible, receipt, freeSlots, SESSION_MS } from './lib/tutorBundle';
+import { policy, eligible, receipt, freeSlots, SESSION_MS, unallocatedCredits } from './lib/tutorBundle';
 import { requireCapability, entitlement } from './lib/entitlements';
 import { screen } from '../src/lib/engines/integrity';
 import { BUNDLE_RESOURCES, BUNDLE_GUIDE } from '../src/lib/tutor-bundle/resources';
@@ -75,7 +75,7 @@ export const allocate=mutation({args:{bundleId:v.id('tutorBundles'),offerId:v.id
  text(a.note,10,1000);
  const sessions=await ctx.db.query('tutorBundleSessions').withIndex('by_bundle',q=>q.eq('bundleId',b._id)).collect();if(sessions.some(s=>s.status!=='available'&&s.status!=='completed'))throw new ConvexError('Resolve scheduled or disputed sessions before reallocating.');
  const active=(await ctx.db.query('tutorBundles').withIndex('by_tutor',q=>q.eq('tutorId',r.tutorId)).collect()).filter(x=>x._id!==b._id&&x.status!=='completed'&&x.expiresAt>Date.now());
- if(active.length>=r.capacity||(await freeSlots(ctx,r,b.expiresAt)).length<sessions.filter(s=>s.status==='available').length)throw new ConvexError('TUTOR_CAPACITY_REACHED');
+ if(active.length>=r.capacity||(await freeSlots(ctx,r,b.expiresAt)).length-await unallocatedCredits(ctx,r.tutorId,b._id)<sessions.filter(s=>s.status==='available').length)throw new ConvexError('TUTOR_CAPACITY_REACHED');
  await ctx.db.patch(b._id,{offerId:r.offerId,tutorId:r.tutorId,status:'allocated',guardianApproved:!learner?.isMinor});await notify(ctx,{...b,tutorId:r.tutorId},'Tutor allocated','Your tutor is ready. Under-18 learners need guardian approval before scheduling.');await audit(ctx,user._id,'tutor_bundle.allocate',b._id,a.note.trim());
 }});
 export const consent=mutation({args:{bundleId:v.id('tutorBundles')},handler:async(ctx,a)=>{const {user,b,guardian,learner}=await access(ctx,a.bundleId,true);if(!guardian||!learner?.isMinor||b.status!=='allocated')throw new ConvexError('LINKED_GUARDIAN_REQUIRED');await ctx.db.patch(b._id,{guardianApproved:true});await audit(ctx,user._id,'tutor_bundle.guardian_consent',b._id,b.tutorId);}});

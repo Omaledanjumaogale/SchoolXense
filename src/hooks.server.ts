@@ -16,6 +16,8 @@ const LEGACY: [RegExp, string][] = [
 ];
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const runtime=event.platform?.env as Record<string,unknown>|undefined;
+	if(runtime?.APP_ENV==='preview'&&(typeof runtime.PUBLIC_CONVEX_URL!=='string'||runtime.PUBLIC_CONVEX_URL.includes('adjoining-dalmatian-113')))return new Response('Preview backend isolation has not been configured.',{status:503,headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex'}});
 	event.locals.requestId = crypto.randomUUID();
 	const { pathname, host } = event.url;
 
@@ -27,7 +29,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const upstream = await resolve(event);
 	// Auth proxies return fetch responses whose headers are immutable.
 	const response = new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: new Headers(upstream.headers) });
-	if (pathname.startsWith('/api/auth/') || pathname.startsWith('/api/media/') || /\/(admin-login|login|signup|welcome|reset-password|forgot-password|home|ops|inst|wallet|checkout|practice|settings|sessions|threads)(\/|$)/.test(pathname)) response.headers.set('Cache-Control', 'private, no-store');
+	if (pathname.startsWith('/api/') || /\/(admin-login|login|signup|welcome|reset-password|forgot-password|home|ops|inst|wallet|checkout|practice|settings|sessions|threads|tutor-bundle|studio|teams|tasks|contracts|referrals|family|record|review|plan|packs|offers|requests|payouts|earn|skills|notifications|certificates|attempt|book)(\/|$)/.test(pathname)) response.headers.set('Cache-Control', 'private, no-store');
 	response.headers.set('X-Request-Id', event.locals.requestId);
 	response.headers.set('X-Content-Type-Options', 'nosniff');
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');

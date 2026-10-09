@@ -55,6 +55,8 @@ export const catalogue = query({ args: { kind: v.union(v.literal('offers'), v.li
 
 export const offers = query({ args: {}, handler: ctx=>ctx.db.query('offers').withIndex('by_active_kind',q=>q.eq('active',true)).take(50) });
 export const testimonials = query({ args: {}, handler: ctx=>ctx.db.query('testimonials').withIndex('by_approved',q=>q.eq('approved',true)).take(12) });
+export const publicPack=query({args:{slug:v.string()},handler:async(ctx,a)=>{const p=await ctx.db.query('packs').withIndex('by_slug',q=>q.eq('slug',a.slug)).unique();if(!p||p.status!=='live')return null;const author=await ctx.db.get(p.authorId);const {fileId,mediaKey,...pack}=p;return {...pack,authorName:author?.name??'SchoolXense creator'};}});
+export const packAccess=query({args:{packId:v.id('packs')},handler:async(ctx,a)=>{const {user}=await resolve(ctx);const p=await ctx.db.get(a.packId);if(!p||p.status!=='live'||!p.mediaKey)throw new ConvexError('PACK_UNAVAILABLE');const owned=p.authorId===user._id||await hasRole(ctx,user._id,'staff')||!!await ctx.db.query('purchases').withIndex('by_user',q=>q.eq('userId',user._id)).filter(q=>q.eq(q.field('packId'),p._id)).first();if(!owned)throw new ConvexError('PURCHASE_REQUIRED');return {key:p.mediaKey,title:p.title};}});
 export const searchCatalogue=query({args:{q:v.string()},handler:async(ctx,a)=>{
  const text=a.q.trim().toLowerCase();if(text.length<2||text.length>80)return [];
  const offers=await ctx.db.query('offers').withSearchIndex('search_title',q=>q.search('title',text).eq('active',true)).take(8);
@@ -121,6 +123,7 @@ export const workspace = query({ args: { domain: v.string(), tenantId: v.optiona
 
 export const createOffer = mutation({ args: { title: v.string(), subject: v.string(), priceKobo: v.number(), availability: v.string() }, handler: async (ctx, args) => {
 	const { user } = await resolve(ctx, { role: 'tutor', adultOnly: true, capability:'market.earn' });
+	if(!Number.isFinite(Date.parse(args.availability))||Date.parse(args.availability)<=Date.now())throw new ConvexError('Choose a future dated availability slot.');
 	if (!Number.isSafeInteger(args.priceKobo) || args.priceKobo < 50000 || args.priceKobo > 100000000 || args.title.trim().length < 5 || args.title.length > 200 || !screen(args.title).allowed) throw new ConvexError('Invalid offer details.');
 	const checks = await ctx.db.query('verifications').withIndex('by_user', q => q.eq('userId', user._id)).collect();
 	if (!(await hasRole(ctx,user._id,'staff')) && !checks.some(x => x.kind === 'nin' && x.status === 'approved')) throw new ConvexError('Complete identity verification before publishing paid offers.');

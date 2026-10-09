@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { DEMO_MODE } from '$lib/config';
+	import LiveCatalogue from '$lib/live/LiveCatalogue.svelte';
 	import { goto } from '$app/navigation';
 	import { hive } from '$hive/store.svelte';
 	import { ui } from '$ui/ui.svelte';
@@ -17,9 +19,9 @@
 		if (p) goto(`/checkout/${p.id}`);
 	}
 </script>
+<svelte:head><title>SchoolXense Library · Study packs</title></svelte:head>
 
-<svelte:head><title>Hive Library · Study packs</title></svelte:head>
-
+{#if !DEMO_MODE}<LiveCatalogue/>{:else}
 <section class="max-w-[1240px] mx-auto px-4 sm:px-6 pt-10" data-module="library">
 	<PageHeader eyebrow="Hive Library" title="Original notes, flashcards and worked solutions." sub="Every pack passes an originality check before it goes live. Authors keep 85% of each sale, and buyers keep access to every updated version." />
 	<div class="flex flex-wrap items-center gap-3 justify-between">
@@ -45,3 +47,4 @@
 		{/each}
 	</div>
 </section>
+{/if}

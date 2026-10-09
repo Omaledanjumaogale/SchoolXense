@@ -6,6 +6,12 @@ import { profileIsComplete, requireCapability } from './entitlements';
 import { planById } from '../../src/lib/payments/plans';
 
 export const SESSION_COUNT=6, SESSION_MS=45*60_000;
+export const CHECKOUT_HOLD_MS=30*60_000;
+export function activeHold(payment:{createdAt:number},now=Date.now()){return payment.createdAt+CHECKOUT_HOLD_MS>now;}
+export async function unallocatedCredits(ctx:QueryCtx,tutorId:Id<'users'>,exclude?:Id<'tutorBundles'>){
+ let count=0;for(const b of await ctx.db.query('tutorBundles').withIndex('by_tutor',q=>q.eq('tutorId',tutorId)).collect())if(b._id!==exclude&&b.expiresAt>Date.now()&&b.status!=='completed')count+=(await ctx.db.query('tutorBundleSessions').withIndex('by_bundle',q=>q.eq('bundleId',b._id)).collect()).filter(s=>s.status==='available').length;
+ return count;
+}
 export async function policy(ctx:QueryCtx){return ctx.db.query('tutorBundlePolicy').withIndex('by_key',q=>q.eq('key','current')).unique();}
 export async function eligible(ctx:QueryCtx,r:Doc<'tutorBundleRoster'>,minor=false,subject?:string,budget?:bigint){
  const p=await policy(ctx),o=await ctx.db.get(r.offerId),u=await ctx.db.get(r.tutorId);

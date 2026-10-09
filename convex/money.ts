@@ -12,7 +12,7 @@ import type { Id } from './_generated/dataModel';
 import { workflows } from './components';
 import { planById } from '../src/lib/payments/plans';
 import { entitlement } from './lib/entitlements';
-import { createBundle, SESSION_COUNT } from './lib/tutorBundle';
+import { createBundle, SESSION_COUNT, activeHold } from './lib/tutorBundle';
 
 const KIND: Record<string, TxnKind> = { booking: 'session', cohort: 'session', pack: 'pack', contract: 'collab', subscription: 'subscription', exam_pass: 'subscription', invoice: 'licence' };
 const ESCROWED = new Set(['booking', 'cohort', 'contract']);
@@ -27,6 +27,7 @@ export const settlePayment = internalMutation({
 		if (!p) throw new ConvexError('UNKNOWN_TX_REF');
 		if (p.status !== 'pending') return { ok: true, duplicate: true };
 		if (a.amountKobo !== p.amount || a.currency !== p.currency) throw new ConvexError('AMOUNT_OR_CURRENCY_MISMATCH');
+		if(p.refId?.startsWith('plus_tutor:')&&!activeHold(p))throw new ConvexError('EXPIRED_HOLD_REQUIRES_RECONCILIATION');
 		if (!p.refId || !KIND[p.purpose]) throw new ConvexError('Invalid order purpose.');
 		if(p.purpose==='booking'){const booking=await ctx.db.get(p.refId as Id<'bookings'>);if(booking?.status!=='pending_payment'||booking.price!==p.amount)throw new ConvexError('Booking requires manual reconciliation.');}
 		await ctx.db.patch(p._id, { status: 'successful', flwTxId: a.flwTxId, method: a.method });
@@ -84,7 +85,7 @@ export const afterPayment = internalMutation({
 	handler: async (ctx, { paymentId }) => {
 		const p = (await ctx.db.get(paymentId))!;
 		if(!p||p.status!=='successful'||p.fulfilledAt)return;
-		if (p.purpose === 'booking') await ctx.db.patch(p.refId as Id<'bookings'>, { status: 'confirmed' });
+		if (p.purpose === 'booking') await ctx.db.patch(p.refId as Id<'bookings'>, { status: 'confirmed',paymentId:p._id });
 		if (p.purpose === 'subscription' || p.purpose === 'exam_pass') {
 			const [planId, forUser] = (p.refId ?? '').split(':');
 			const plan=planById(planId);if(!plan?.purchasable||p.currency!=='NGN'||plan.priceKobo!==Number(p.amount))throw new ConvexError('Subscription payment requires reconciliation.');
@@ -158,14 +159,16 @@ export const requestPayout = withAccess({ adultOnly: true }).mutation({
 		if (!acct?.nameMatched) throw new ConvexError('NO_MATCHED_ACCOUNT');
 		const w = await userWallet(ctx, ctx.user._id);
 		if ((await balance(ctx, w)) < amountKobo) throw new ConvexError('INSUFFICIENT_FUNDS');
-		const reference = `SH-PO-${Date.now().toString(36).toUpperCase()}`;
+		if(process.env.PAYOUTS_ENABLED!=='true')throw new ConvexError('PAYOUTS_UNAVAILABLE');
+		if(!acct.flwRecipientRef)throw new ConvexError('NO_VERIFIED_RECIPIENT');
+		const reference = `SX-PO-${crypto.randomUUID()}`;
 		await post(ctx, `payout:${reference}`, [{ walletId: w, amount: -amountKobo, kind: 'payout', memo: reference }, { walletId: await systemWallet(ctx, 'payouts_out'), amount: amountKobo, kind: 'payout', memo: reference }]);
-		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status: amountKobo > 50_000_000n ? 'awaiting_approval' : 'queued', reference, approvals: [] });
+		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status:'awaiting_approval', reference, approvals: [] });
 		await audit(ctx, ctx.user._id, 'payouts.request', reference);
 	}
 });
 
-export const queuedPayouts = internalQuery({ args: {}, handler: (ctx) => ctx.db.query('payouts').withIndex('by_status', (q) => q.eq('status', 'queued')).take(500) });
+export const queuedPayouts = internalQuery({ args: {}, handler: async(ctx) => {const rows=await ctx.db.query('payouts').withIndex('by_status',q=>q.eq('status','queued')).take(500);return Promise.all(rows.map(async p=>({...p,recipient:(await ctx.db.query('payoutAccounts').withIndex('by_user',q=>q.eq('userId',p.userId)).unique())?.flwRecipientRef})));} });
 
 /** Daily 18:00 WAT: batch queued payouts into one Flutterwave bulk transfer; transfer webhooks close each payout. */
 export const runPayouts = internalAction({
@@ -175,10 +178,11 @@ export const runPayouts = internalAction({
 		if (process.env.PAYOUTS_ENABLED !== 'true' || !process.env.FLW_SECRET_KEY) return;
 		const queued = await ctx.runQuery(internal.money.queuedPayouts, {});
 		if (!queued.length) return;
+		if(queued.some(p=>!p.recipient||!/^\d+$/.test(p.recipient)))throw new ConvexError('PAYOUT_RECIPIENT_RECONCILIATION_REQUIRED');
 		const res = await fetch('https://api.flutterwave.com/v3/bulk-transfers', {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, 'Content-Type': 'application/json' },
-			body: JSON.stringify({ title: `SchoolXense payouts ${new Date().toISOString().slice(0, 10)}`, bulk_data: queued.map((p) => ({ amount: Number(p.amount) / 100, currency: 'NGN', reference: p.reference, narration: 'SchoolXense earnings' })) })
+			body: JSON.stringify({ title: `SchoolXense payouts ${new Date().toISOString().slice(0, 10)}`, bulk_data: queued.map((p) => ({ beneficiary: Number(p.recipient),amount: Number(p.amount) / 100, currency: 'NGN', reference: p.reference, narration: 'SchoolXense earnings' })) })
 		});
 		await ctx.runMutation(internal.money.markProcessing, { ids: queued.map((p) => p._id), ok: res.ok });
 	}

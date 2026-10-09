@@ -18,8 +18,9 @@ export async function post(ctx: MutationCtx, txnId: string, rows: { walletId: Id
 	const now = Date.now();
 	for (const r of rows) if (r.amount !== 0n) {
 		const entryId=await ctx.db.insert('ledgerEntries', { txnId, walletId: r.walletId, amount: r.amount, currency: 'NGN', kind: r.kind, memo: r.memo, sourcePaymentId, createdAt: now });
+		const wallet=await ctx.db.get(r.walletId);const owner=wallet?.ownerUserId&&await ctx.db.get(wallet.ownerUserId);
+		if(owner)await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'wallet.activity',subject:owner.ecosystemId??`schoolxense:${owner._id}`,payload:{version:1,entryId,amountKobo:r.amount.toString(),currency:'NGN',orderId:sourcePaymentId,kind:r.kind,referralCode:owner.centralReferralCode},createdAt:now});
 		if(r.amount>0n&&['referral','referrer','ambassador','override'].includes(r.kind)){
-			const wallet=await ctx.db.get(r.walletId);const owner=wallet?.ownerUserId&&await ctx.db.get(wallet.ownerUserId);
 			if(owner)await ctx.db.insert('ecosystemEvents',{eventId:crypto.randomUUID(),app:'schoolxense',type:'commission.credited',subject:owner.ecosystemId??`schoolxense:${owner._id}`,payload:{version:1,entryId,amountKobo:r.amount.toString(),currency:'NGN',orderId:sourcePaymentId,referralCode:owner.centralReferralCode},createdAt:now});
 		}
 	}

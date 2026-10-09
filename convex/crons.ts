@@ -6,6 +6,7 @@ const crons = cronJobs();
 crons.interval('release due escrows', { minutes: 15 }, internal.money.releaseDue, {});
 // No external request occurs unless the agreed ecosystem transport is explicitly enabled.
 crons.interval('deliver ecosystem outbox', { minutes: 5 }, internal.ecosystem.deliver, {});
+crons.interval('reconcile booking refunds',{minutes:15},internal.disputes.processRefunds,{});
 // Daily payouts at 18:00 WAT (17:00 UTC) via Flutterwave bulk transfer.
 crons.daily('run payouts', { hourUTC: 17, minuteUTC: 0 }, internal.money.runPayouts, {});
 // Monthly Studio royalties on the 1st at 06:00 WAT.
