@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+const url=process.env.PUBLIC_CONVEX_URL;
+if(!url||!/^https:\/\/[a-z0-9-]+\.convex\.cloud$/.test(url)||url.includes('adjoining-dalmatian-113'))throw new Error('An isolated Convex preview URL is required.');
+const site=url.replace('.convex.cloud','.convex.site');
+let config=await readFile('wrangler.toml','utf8');
+const start=config.indexOf('[env.preview.vars]'),end=config.indexOf('[[env.preview.',start);
+if(start<0||end<0)throw new Error('Preview configuration section missing.');
+const section=config.slice(start,end).replace(/PUBLIC_CONVEX_URL = .*/g,`PUBLIC_CONVEX_URL = "${url}"`).replace(/PUBLIC_CONVEX_(SITE_URL|HTTP_ACTIONS_URL) = .*/g,(_,key)=>`PUBLIC_CONVEX_${key} = "${site}"`);
+await writeFile('wrangler.toml',config.slice(0,start)+section+config.slice(end));
+const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:process.platform==='win32',env:{...process.env,PUBLIC_CONVEX_SITE_URL:site,PUBLIC_CONVEX_HTTP_ACTIONS_URL:site,APP_ENV:'preview',PAYMENTS_ENABLED:'false'}});
+process.exit(result.status??1);

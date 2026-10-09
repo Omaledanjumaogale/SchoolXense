@@ -73,6 +73,8 @@ jobs:
     timeout-minutes: 15
     env:
       CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,4 +94,7 @@ jobs:
         if: steps.preview.outputs.enabled == 'true'
       - name: Deploy isolated preview backend
         if: steps.preview.outputs.enabled == 'true'
-        run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable
+        run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable --cmd "node scripts/build-preview.mjs" --cmd-url-env-var-name PUBLIC_CONVEX_URL
+      - name: Publish isolated Pages preview
+        if: steps.preview.outputs.enabled == 'true'
+        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch "pr-${{ github.event.pull_request.number }}"

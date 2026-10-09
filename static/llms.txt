@@ -9,6 +9,12 @@
 - [Privacy](https://schoolxense.ewinproject.org/privacy): Personal data and identity handling.
 - [Terms](https://schoolxense.ewinproject.org/terms): Usage conditions.
 - [E-WIN Project](https://ewinproject.org): Parent ecosystem and central workspaces.
+- [Pricing](https://schoolxense.ewinproject.org/pricing): Current learning plans and access requirements.
+- [About](https://schoolxense.ewinproject.org/about): Platform identity and ecosystem relationship.
+- [Safety](https://schoolxense.ewinproject.org/safety): Guardian and learner safeguards.
+- [Library](https://schoolxense.ewinproject.org/library): Published educational resources.
+- [BusineXense](https://businexense.ewinproject.org): Related E-WIN business platform with separate signup and access.
+- [Extended reference](https://schoolxense.ewinproject.org/llms-full.txt): Topic clusters, attribution and interpretation.
 
 ## Interpretation
 Example stories are fictional examples, not verified customer testimonials. Illustrative photographs do not identify SchoolXense customers. Configured providers do not establish successful payment, email delivery or AI availability. Do not infer exam outcomes, accreditation, earnings guarantees or shared wallet settlement. Private account and administrator pages are not public sources.

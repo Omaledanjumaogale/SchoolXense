@@ -43,3 +43,6 @@ Landing photography is real licensed illustrative imagery, outside the hero. Exa
 ## Acceptance boundaries
 
 Configured credentials do not prove successful OAuth provider journeys, inbox delivery, AI generation or payment settlement. Owner verification needs the recipient. OAuth dashboard callbacks must allow the canonical `/api/auth/callback/google` and `/api/auth/callback/github` URLs. The Cloudflare zone currently has its five custom WAF rules allocated; no unrelated rule has been removed to add a SchoolXense rule. Payment acceptance, provider journeys and new financial flows must be exercised before enabling collection/payouts.
+# Search discovery and isolated previews
+
+Server-loaded SEO metadata, a shared JSON-LD graph, explicit AI crawler rules, public LLM references and the E-WIN landing banner are documented in [docs/SEO-PREVIEW.md](docs/SEO-PREVIEW.md). PR preview deployment requires an isolated Convex preview deploy key; its build rejects the production backend URL.
