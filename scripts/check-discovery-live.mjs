@@ -2,7 +2,14 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 const base=(process.argv[2]??'https://schoolxense.ewinproject.org').replace(/\/$/,'');
 const preview=new URL(base).hostname.endsWith('.pages.dev');
 const results=[];
-async function check(path,verify){const response=await fetch(base+path,{signal:AbortSignal.timeout(30000)}),text=await response.text();if(response.status!==200)throw new Error(`${path}: HTTP ${response.status}`);await verify(text,response);results.push({path,status:response.status,passed:true});console.log('Passed '+path);return text;}
+async function check(path,verify){
+ // Pages aliases and cached media can briefly serve the preceding release after publish.
+ // Require the actual validation to pass within a bounded propagation window.
+ for(let attempt=1;attempt<=4;attempt++){
+  try{const response=await fetch(base+path,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(30000)}),text=await response.text();if(response.status!==200)throw new Error(`${path}: HTTP ${response.status}`);await verify(text,response);results.push({path,status:response.status,passed:true,attempt});console.log('Passed '+path);return text;}
+  catch(error){if(attempt===4)throw error;console.log(`Retrying ${path} after failed deployment check (${attempt}/4)`);await new Promise(resolve=>setTimeout(resolve,2000));}
+ }
+}
 await check('/faq',(html,response)=>{
  const blocks=[...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)];
  if(blocks.length!==1)throw new Error('FAQ requires one JSON-LD graph');
