@@ -19,7 +19,7 @@
 	});
 </script>
 
-<SEO meta={page.data.seo ?? data.seo}/>
+<SEO meta={page.data.preview?{...(page.data.seo ?? data.seo),robots:'noindex,nofollow'}:(page.data.seo ?? data.seo)}/>
 
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] ctl ctl-sm">Skip to content</a>
 {@render children()}

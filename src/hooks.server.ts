@@ -18,7 +18,7 @@ const LEGACY: [RegExp, string][] = [
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const runtime=event.platform?.env as Record<string,unknown>|undefined;
-	if(runtime?.APP_ENV==='preview'&&(typeof runtime.PUBLIC_CONVEX_URL!=='string'||!/^https:\/\/[a-z0-9-]+\.convex\.cloud$/.test(runtime.PUBLIC_CONVEX_URL)||runtime.PUBLIC_CONVEX_URL.includes('adjoining-dalmatian-113')))return new Response('Preview backend isolation has not been configured.',{status:503,headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex'}});
+	if(runtime?.APP_ENV==='preview'&&(typeof runtime.PUBLIC_CONVEX_URL!=='string'||!/^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)?\.convex\.cloud$/.test(runtime.PUBLIC_CONVEX_URL)||runtime.PUBLIC_CONVEX_URL.includes('adjoining-dalmatian-113')))return new Response('Preview backend isolation has not been configured.',{status:503,headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex'}});
 	event.locals.requestId = crypto.randomUUID();
 	const { pathname, host } = event.url;
 

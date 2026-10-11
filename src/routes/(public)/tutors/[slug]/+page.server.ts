@@ -6,7 +6,7 @@ import {buildMeta,SITE} from '$lib/seo';
 import {buildPageGraph} from '$lib/schema/graph';
 import {buildOrganizationSchema,buildMotherSchema,buildBreadcrumbSchema} from '$lib/schema/builders';
 export const load=async({params}:{params:{slug:string}})=>{
- if(DEMO_MODE)return {};
+ if(DEMO_MODE)return {tutor:null};
  const tutor=await new ConvexHttpClient(CONVEX_URL).query(api.portal.publicTutor,{slug:params.slug});
  if(!tutor)error(404,'Published tutor not found');
  const path='/tutors/'+encodeURIComponent(params.slug);
