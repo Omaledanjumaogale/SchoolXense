@@ -5,6 +5,7 @@ compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
+EWIN_SYNC_ENABLED = "true"
 PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_CONVEX_URL = "https://tacit-snail-617.eu-west-1.convex.cloud"
@@ -28,6 +29,7 @@ binding = "PAYMENT_EVENTS"
 queue = "schoolxense-payment-events"
 
 [env.preview.vars]
+EWIN_SYNC_ENABLED = "false"
 PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_CONVEX_URL = "https://preview-isolation-required.invalid"
@@ -51,6 +53,7 @@ binding = "PAYMENT_EVENTS"
 queue = "schoolxense-payment-events-preview"
 
 [env.production.vars]
+EWIN_SYNC_ENABLED = "true"
 PUBLIC_APP_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_SITE_URL = "https://schoolxense.ewinproject.org"
 PUBLIC_CONVEX_URL = "https://tacit-snail-617.eu-west-1.convex.cloud"

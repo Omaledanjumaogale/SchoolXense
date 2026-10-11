@@ -2,9 +2,9 @@
 
 ## E-WIN reporting
 
-The signed mother readiness request returned HTTP 500. Authenticated deployment logs establish the cause: the Convex team exceeded its free-plan limits and `pastel-lemur-183` is disabled. Application queries and HTTP actions cannot execute. A response that pretends the database is ready would conceal the outage.
+The previous signed mother readiness request returned HTTP 500 because `pastel-lemur-183` was disabled by team free-plan limits. E-WIN now runs on `affable-dragon-883.eu-west-1.convex.cloud`. The new signed readiness endpoint returned HTTP 200 with `ready: true`, `reportingOnly: true` and `settlementOwner: schoolxense`.
 
-Re-enable the existing deployment, or migrate the mother application and its component data to a separate available production deployment. Recovery artifacts stay in ignored `.backups` and `.artifacts` directories. Keep signup, access plans and settlement independent. After recovery, rerun the signed readiness probe and verify `ready: true`, `reportingOnly: true` and `settlementOwner: schoolxense`, then restore reporting delivery. Existing outbox backoff/quarantine/replay controls remain in place.
+The existing real SchoolXense event was replayed twice against the new mother endpoint. Both requests returned HTTP 200 and matching event receipts, verifying duplicate-safe recovery. SchoolXense's endpoint and synchronization flag were updated and delivery ran successfully with zero ready events pending. Recovery artifacts stay in ignored `.backups` and `.artifacts` directories. Signup, access plans and settlement remain independent. Existing outbox backoff/quarantine/replay controls remain in place.
 
 ## Payment provider activation
 

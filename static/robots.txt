@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -41,6 +42,7 @@ Disallow: /book
 
 User-agent: GPTBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -82,6 +84,7 @@ Disallow: /book
 
 User-agent: ClaudeBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -123,6 +126,7 @@ Disallow: /book
 
 User-agent: PerplexityBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -164,6 +168,7 @@ Disallow: /book
 
 User-agent: OAI-SearchBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -205,6 +210,7 @@ Disallow: /book
 
 User-agent: Google-Extended
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -246,6 +252,7 @@ Disallow: /book
 
 User-agent: Anthropic-AI
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -287,6 +294,7 @@ Disallow: /book
 
 User-agent: cohere-ai
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -328,6 +336,7 @@ Disallow: /book
 
 User-agent: YouBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -369,6 +378,7 @@ Disallow: /book
 
 User-agent: DuckAssistBot
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst
@@ -410,6 +420,7 @@ Disallow: /book
 
 User-agent: Applebot-Extended
 Allow: /
+Allow: /api/images/
 Disallow: /admin
 Disallow: /ops
 Disallow: /inst

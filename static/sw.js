@@ -1,9 +1,15 @@
 // Cache public assets only. Account pages and API responses must stay on the network.
-const VERSION = 'schoolxense-public-v3';
+const VERSION = 'schoolxense-public-v4';
 const OFFLINE_URL = '/offline';
 const SHELL = [OFFLINE_URL, '/favicon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(VERSION).then(async (cache) => {
+    await cache.addAll(SHELL);
+    const offline = await cache.match(OFFLINE_URL);
+    const html = await offline.text();
+    const styles = [...html.matchAll(/href="([^"]+\.css)"/g)].map(match => new URL(match[1], self.location.origin));
+    await cache.addAll(styles.filter(url => url.origin === self.location.origin && url.pathname.startsWith('/_app/immutable/')).map(url => url.href));
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('hive-') || (key.startsWith('schoolxense-') && key !== VERSION)).map((key) => caches.delete(key)))).then(() => self.clients.claim()));

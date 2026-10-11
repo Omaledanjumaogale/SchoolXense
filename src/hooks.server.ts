@@ -30,9 +30,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const upstream = await resolve(event);
 	// Auth proxies return fetch responses whose headers are immutable.
 	const response = new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: new Headers(upstream.headers) });
-	if (pathname.startsWith('/api/') || /\/(admin-login|login|signup|welcome|reset-password|forgot-password|home|ops|inst|wallet|checkout|practice|settings|sessions|threads|tutor-bundle|studio|teams|tasks|contracts|referrals|family|record|review|plan|packs|offers|requests|payouts|earn|skills|notifications|certificates|attempt|book)(\/|$)/.test(pathname)) response.headers.set('Cache-Control', 'private, no-store');
+	const publicImage = pathname.startsWith('/api/images/') && event.request.method === 'GET' && [200,304].includes(response.status) && response.headers.get('Cache-Control')?.startsWith('public,') && !response.headers.has('Set-Cookie');
+	if ((pathname.startsWith('/api/') && !publicImage) || /\/(admin-login|login|signup|welcome|reset-password|forgot-password|home|ops|inst|wallet|checkout|practice|settings|sessions|threads|tutor-bundle|studio|teams|tasks|contracts|referrals|family|record|review|plan|packs|offers|requests|payouts|earn|skills|notifications|certificates|attempt|book)(\/|$)/.test(pathname)) response.headers.set('Cache-Control', 'private, no-store');
 	response.headers.set('X-Request-Id', event.locals.requestId);
-	if(privatePath(pathname)||runtime?.APP_ENV==='preview')response.headers.set('X-Robots-Tag','noindex, nofollow');
+	if((privatePath(pathname)&&!publicImage)||runtime?.APP_ENV==='preview')response.headers.set('X-Robots-Tag','noindex, nofollow');
 	response.headers.set('X-Content-Type-Options', 'nosniff');
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
