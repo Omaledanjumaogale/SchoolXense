@@ -12,7 +12,7 @@ const role = v.union(v.literal('learner'), v.literal('guardian'), v.literal('tut
 const moduleId = v.string();
 
 export default defineSchema({
-	aiRuns: defineTable({ actorId:v.id('users'), checkedAt:v.number(), status:v.union(v.literal('succeeded'),v.literal('failed')), provider:v.string(),model:v.string(),stored:v.number(),durationMs:v.number(),primaryFailed:v.boolean() }).index('by_time',['checkedAt']),
+	aiRuns: defineTable({ actorId:v.id('users'), checkedAt:v.number(), status:v.union(v.literal('succeeded'),v.literal('failed')), provider:v.string(),model:v.string(),stored:v.number(),durationMs:v.number(),primaryFailed:v.boolean(),primaryErrorCode:v.optional(v.string()),errorCode:v.optional(v.string()) }).index('by_time',['checkedAt']),
 	tutorBundlePolicy: defineTable({key:v.literal('current'),enabled:v.boolean(),sessionKobo:kobo,approvedBy:v.id('users'),updatedAt:v.number()}).index('by_key',['key']),
 	tutorBundleRoster: defineTable({offerId:v.id('offers'),tutorId:v.id('users'),capacity:v.number(),slots:v.array(v.number()),sessionKobo:kobo,approved:v.boolean()}).index('by_offer',['offerId']).index('by_tutor',['tutorId']),
 	tutorBundles: defineTable({userId:v.id('users'),payerId:v.id('users'),paymentId:v.id('payments'),expiresAt:v.number(),sessionKobo:kobo,status:v.union(v.literal('needs_preferences'),v.literal('awaiting_tutor'),v.literal('allocated'),v.literal('completed')),subject:v.optional(v.string()),goal:v.optional(v.string()),offerId:v.optional(v.id('offers')),tutorId:v.optional(v.id('users')),guardianApproved:v.boolean()}).index('by_user',['userId']).index('by_payment',['paymentId']).index('by_tutor',['tutorId']).index('by_status',['status']),
