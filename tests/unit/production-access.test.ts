@@ -92,6 +92,7 @@ describe('Production access and authoritative orders',()=>{
 describe('Generated content validation',()=>{
  const q={topic:'Forces',stem:'What is the SI unit of force?',options:['Newton','Joule','Watt','Volt'],answer:0,explanation:'Force is measured in newtons.'};
  test('accepts structured drafts and fenced JSON',()=>{expect(parseQuestions('```json\n'+JSON.stringify([q])+'\n```',1)).toEqual([q]);});
+ test('accepts provider-serialized JSON and question envelopes without relaxing validation',()=>{expect(parseQuestions([q],1)).toEqual([q]);expect(parseQuestions({questions:[q]},1)).toEqual([q]);expect(parseQuestions(JSON.stringify({questions:[q]}),1)).toEqual([q]);expect(()=>parseQuestions({questions:[q,q]},1)).toThrow();expect(()=>parseQuestions({questions:[{...q,answer:4}]},1)).toThrow();expect(()=>parseQuestions({questions:'not an array'},1)).toThrow();});
  test('rejects malformed answer keys, duplicate options and excess output',()=>{expect(()=>validateQuestions([{...q,answer:9}])).toThrow();expect(()=>validateQuestions([{...q,options:['A','A','B','C']}])).toThrow();expect(()=>validateQuestions([q,q],1)).toThrow();expect(()=>parseQuestions('not json',1)).toThrow();});
 });
 describe('Profiles and administrative review',()=>{

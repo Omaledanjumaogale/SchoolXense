@@ -9,7 +9,15 @@ export function validateQuestions(value: unknown, max = 10): GeneratedQuestion[]
 		return { topic: (q.topic as string).trim(), stem: (q.stem as string).trim(), options: q.options.map(x => x.trim()), answer: q.answer as number, explanation: (q.explanation as string).trim() };
 	});
 }
-export function parseQuestions(text: string, max: number) {
-	const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-	return validateQuestions(JSON.parse(trimmed), max);
+export function parseQuestions(payload: unknown, max: number) {
+	let value = payload;
+	if (typeof payload === 'string') {
+		if (payload.length > 100000) throw new Error('Invalid AI output size.');
+		const trimmed = payload.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+		value = JSON.parse(trimmed);
+	}
+	// Some compatible providers serialize JSON themselves or return a named envelope.
+	// Every question still passes the same strict content and count checks.
+	if (value && typeof value === 'object' && !Array.isArray(value) && 'questions' in value) value = (value as Record<string, unknown>).questions;
+	return validateQuestions(value, max);
 }

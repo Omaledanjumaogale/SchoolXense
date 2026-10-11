@@ -10,7 +10,11 @@ import { resolve } from './lib/access';
 // Persist only bounded diagnostic codes, never provider bodies or credentials.
 function failureCode(error: unknown) {
 	if (error instanceof Error && /^AI_(?:HTTP_\d{3}|NOT_CONFIGURED)$/.test(error.message)) return error.message;
-	if (error instanceof SyntaxError || (error instanceof Error && error.message.startsWith('Invalid AI'))) return 'AI_INVALID_OUTPUT';
+	if (error instanceof SyntaxError) return 'AI_INVALID_JSON';
+	if (error instanceof Error) {
+		const codes: Record<string,string> = { 'Invalid AI question count.':'AI_INVALID_COUNT', 'Invalid AI question.':'AI_INVALID_QUESTION', 'Invalid AI text.':'AI_INVALID_TEXT', 'Invalid AI options or answer.':'AI_INVALID_OPTIONS_OR_ANSWER', 'Invalid AI output size.':'AI_INVALID_SIZE' };
+		if (codes[error.message]) return codes[error.message];
+	}
 	return 'AI_TRANSPORT_OR_PROCESSING';
 }
 
