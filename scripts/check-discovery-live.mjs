@@ -9,7 +9,11 @@ await check('/faq',(html,response)=>{
  const graph=JSON.parse(blocks[0][1])['@graph'];
  const faq=graph.find(x=>x['@type']==='FAQPage');if(!faq?.mainEntity?.length)throw new Error('FAQ schema missing');
  const visible=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#(?:39|x27);/gi,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');
- for(const row of faq.mainEntity)if(!visible.includes(row.name))throw new Error('FAQ content missing from SSR: '+row.name);
+ const normalize=text=>text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+ for(const row of faq.mainEntity){
+  if(!visible.includes(row.name))throw new Error('FAQ question missing from SSR: '+row.name);
+  if(!row.acceptedAnswer?.text||!normalize(visible).includes(normalize(row.acceptedAnswer.text)))throw new Error('FAQ answer missing from SSR: '+row.name);
+ }
  if(!html.includes('rel="canonical"')||!html.includes('summary_large_image'))throw new Error('Social metadata missing');
  if(preview&&!response.headers.get('x-robots-tag')?.includes('noindex'))throw new Error('Preview must be noindex');
 });
@@ -20,4 +24,9 @@ const paths=[...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(x=>new URL(x[1]).pat
 for(const path of paths.slice(0,3))await check(path,html=>{if(!html.includes('application/ld+json')||!html.includes('<h1'))throw new Error('Dynamic page lacks server content/schema');});
 const image=await fetch(base+'/social-card.png',{signal:AbortSignal.timeout(30000)});const png=new DataView(await image.arrayBuffer());if(image.status!==200||png.getUint32(16)!==1200||png.getUint32(20)!==630)throw new Error('Social image must be a valid 1200×630 PNG');results.push({path:'/social-card.png',passed:true,width:1200,height:630});
 for(const path of ['/robots.txt','/llms.txt','/llms-full.txt','/.well-known/ai-agent-manifest.json'])await check(path,text=>{if(!text.length)throw new Error(path+' is empty');});
+await check('/offline',html=>{if(!html.includes('You’re offline')||html.includes('start(app'))throw new Error('Offline fallback must render without client hydration');});
+await check('/api/images/landing/learning-together.webp',(_text,response)=>{
+ if(!response.headers.get('content-type')?.startsWith('image/')||!response.headers.get('cache-control')?.startsWith('public,'))throw new Error('Public media must be an image with public caching');
+ if(!preview&&response.headers.get('x-robots-tag')?.includes('noindex'))throw new Error('Production public media must remain crawlable');
+});
 mkdirSync('.artifacts',{recursive:true});writeFileSync('.artifacts/discovery-live.json',JSON.stringify({base,preview,results,dynamicPagesChecked:Math.min(3,paths.length),dynamicPagesAvailable:paths.length},null,2));
