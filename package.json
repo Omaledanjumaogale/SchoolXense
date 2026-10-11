@@ -43,7 +43,7 @@
     "@fontsource-variable/fraunces": "^5.2.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.0",
     "@mmailaender/convex-better-auth-svelte": "^0.9.0",
-    "better-auth": "~1.6.15",
+    "better-auth": "~1.6.33",
     "convex": "^1.27.0",
     "convex-helpers": "^0.1.100",
     "convex-svelte": "^0.14.0"

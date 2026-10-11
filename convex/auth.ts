@@ -4,6 +4,7 @@ import { betterAuth } from 'better-auth/minimal';
 import { components } from './_generated/api';
 import type { DataModel } from './_generated/dataModel';
 import authConfig from './auth.config';
+import { authRateLimitStorage } from './authRateLimit';
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 async function sendEmail(to: string, subject: string, url: string) {
@@ -27,6 +28,6 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => betterAuth({
 		...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? { github: { clientId: process.env.GITHUB_CLIENT_ID, clientSecret: process.env.GITHUB_CLIENT_SECRET } } : {})
 	},
 	session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
-	rateLimit: { enabled: true, window: 60, max: 30, storage: 'database' },
+	rateLimit: { enabled: true, window: 60, max: 30, customStorage: authRateLimitStorage(ctx) },
 	plugins: [convex({ authConfig })]
 });

@@ -31,7 +31,9 @@ for(const mode of ['preview','production']){
  const env_vars={...(previous.env_vars??{})};
  for(const name of ['INTERNAL_WEBHOOK_TOKEN','MEDIA_SIGNING_SECRET'])env_vars[name]={type:'secret_text',value:env[name]};
  env_vars.PAYMENTS_ENABLED={type:'plain_text',value:'false'};
- const publicSettings={PUBLIC_APP_URL:'https://schoolxense.ewinproject.org',PUBLIC_SITE_URL:'https://schoolxense.ewinproject.org',PUBLIC_CONVEX_URL:env.PUBLIC_CONVEX_URL,PUBLIC_CONVEX_SITE_URL:env.PUBLIC_CONVEX_SITE_URL,PUBLIC_CONVEX_HTTP_ACTIONS_URL:env.PUBLIC_CONVEX_SITE_URL,PUBLIC_DEMO_MODE:'false',HIVE_DEMO_MODE:'false',APP_ENV:mode};
+ const backend=mode==='production'?env.PUBLIC_CONVEX_URL:'https://preview-isolation-required.invalid';
+ const site=mode==='production'?env.PUBLIC_CONVEX_SITE_URL:'https://preview-isolation-required.invalid';
+ const publicSettings={PUBLIC_APP_URL:'https://schoolxense.ewinproject.org',PUBLIC_SITE_URL:'https://schoolxense.ewinproject.org',PUBLIC_CONVEX_URL:backend,PUBLIC_CONVEX_SITE_URL:site,PUBLIC_CONVEX_HTTP_ACTIONS_URL:site,PUBLIC_DEMO_MODE:'false',HIVE_DEMO_MODE:'false',APP_ENV:mode};
  for(const[name,value]of Object.entries(publicSettings))env_vars[name]={type:'plain_text',value};
  const suffix=mode==='preview'?'-preview':'';
  deployment_configs[mode]={...previous,env_vars,r2_buckets:{DOCUMENTS:{name:'schoolxense-documents'+suffix},IMAGES:{name:'schoolxense-images'+suffix}},queue_producers:{PAYMENT_EVENTS:{name:'schoolxense-payment-events'+suffix}}};

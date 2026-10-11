@@ -1,11 +1,11 @@
 # Isolated preview deployment access
 
-The SchoolXense project has a project-scoped preview key in the GitHub Actions secret `CONVEX_PREVIEW_DEPLOY_KEY`. It was created using the already authenticated Convex session and the official project management API. The value is not committed or printed in logs.
+SchoolXense production now belongs to `elite-workforce / schoolxense`. The old project's preview key has been removed from GitHub Actions. A preview key for the new project is required; the supplied production deploy key cannot create project preview credentials.
 
 To replace it manually:
 
 1. Sign in to the [Convex dashboard](https://dashboard.convex.dev/).
-2. Select the `omaledanjumaogale` team and the `schoolcbt` project. Its production deployment is `adjoining-dalmatian-113`; the key must be a project **preview** key, not this production deployment's key.
+2. Select the `elite-workforce` team and the `schoolxense` project. Its production deployment is `tacit-snail-617`; the key must be a project **preview** key, not this production deployment's key.
 3. Open project settings and generate a preview deploy key. Name it `SchoolXense GitHub isolated previews`.
 4. Open [SchoolXense Actions secrets](https://github.com/Omaledanjumaogale/SchoolXense/settings/secrets/actions), update `CONVEX_PREVIEW_DEPLOY_KEY`, and paste the value there.
 5. Rerun the pull request workflow. The preview job requires the key's `preview:` prefix and uses a separate `pr-N` backend.

@@ -13,8 +13,8 @@ concurrency:
 env:
   PUBLIC_APP_URL: https://schoolxense.ewinproject.org
   PUBLIC_SITE_URL: https://schoolxense.ewinproject.org
-  PUBLIC_CONVEX_URL: https://adjoining-dalmatian-113.eu-west-1.convex.cloud
-  PUBLIC_CONVEX_SITE_URL: https://adjoining-dalmatian-113.eu-west-1.convex.site
+  PUBLIC_CONVEX_URL: https://tacit-snail-617.eu-west-1.convex.cloud
+  PUBLIC_CONVEX_SITE_URL: https://tacit-snail-617.eu-west-1.convex.site
   PUBLIC_DEMO_MODE: 'false'
   HIVE_DEMO_MODE: 'false'
 jobs:

@@ -1,7 +1,7 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 const url=process.env.PUBLIC_CONVEX_URL;
-if(!url||!/^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)?\.convex\.cloud$/.test(url)||url.includes('adjoining-dalmatian-113'))throw new Error('An isolated Convex preview URL is required.');
+if(!url||!/^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)?\.convex\.cloud$/.test(url)||/(adjoining-dalmatian-113|tacit-snail-617)/.test(url))throw new Error('An isolated Convex preview URL is required.');
 const site=url.replace('.convex.cloud','.convex.site');
 const branch=process.env.PREVIEW_BRANCH;
 if(!branch||!/^pr-\d+$/.test(branch))throw new Error('A validated preview branch is required.');

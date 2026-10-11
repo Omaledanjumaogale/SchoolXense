@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
+import type * as authRateLimit from "../authRateLimit.js";
 import type * as checkout from "../checkout.js";
 import type * as collab from "../collab.js";
 import type * as components_ from "../components.js";
@@ -24,6 +25,7 @@ import type * as institutions from "../institutions.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_bookingEligibility from "../lib/bookingEligibility.js";
 import type * as lib_entitlements from "../lib/entitlements.js";
+import type * as lib_ewinLink from "../lib/ewinLink.js";
 import type * as lib_ledger from "../lib/ledger.js";
 import type * as lib_profileValidation from "../lib/profileValidation.js";
 import type * as lib_tutorBundle from "../lib/tutorBundle.js";
@@ -51,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   ai: typeof ai;
   auth: typeof auth;
+  authRateLimit: typeof authRateLimit;
   checkout: typeof checkout;
   collab: typeof collab;
   components: typeof components_;
@@ -64,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "lib/access": typeof lib_access;
   "lib/bookingEligibility": typeof lib_bookingEligibility;
   "lib/entitlements": typeof lib_entitlements;
+  "lib/ewinLink": typeof lib_ewinLink;
   "lib/ledger": typeof lib_ledger;
   "lib/profileValidation": typeof lib_profileValidation;
   "lib/tutorBundle": typeof lib_tutorBundle;
