@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
@@ -13,6 +14,7 @@
 	const subscription=useQuery(api.subscriptions.current,()=>profile.data?.profileComplete||profile.data?.roles.includes('staff')?{}:'skip');
 	const family=useQuery(api.portal.workspace,()=>profile.data?.profileComplete&&profile.data.roles.includes('guardian')?{domain:'family'}:'skip');
 	let beneficiaryId=$state('');
+	let ready=$state(false);onMount(()=>{ready=true;});
 	let busy=$state(false),error=$state(''),notice=$state('');
 	async function buy(id: string) {
 		if (id === 'free') { await goto(auth.isAuthenticated ? '/home' : '/signup'); return; }
@@ -28,7 +30,7 @@
 
 <section class="max-w-[1240px] mx-auto px-4 sm:px-6 pt-10">
 	<PageHeader eyebrow="Pricing" title="Student prices. No surprises." sub="Choose Korapay for hosted checkout or Flutterwave for a temporary bank transfer account. Guardians can pay for a child's plan." />
-	{#if subscription.data?.active && subscription.data.until}<div class="panel-sunk p-4 text-sm mb-6"><div class="flex flex-wrap items-center gap-2"><Icon name="check" size={16} class="text-[var(--good)]" />Your plan <b>{PLANS.find((p) => p.id === subscription.data?.planId)?.name??'Administrator'}</b> is active until {date(subscription.data.until, { day: 'numeric', month: 'long',year:'numeric' })}.</div>{#if subscription.data.planId!=='staff'}<button class="ctl ctl-sm mt-3" disabled={busy} onclick={()=>manage(subscription.data?.cancelAtPeriodEnd?'resume':'cancel')}>{subscription.data.cancelAtPeriodEnd?'Keep subscription':'Cancel renewal'}</button>{/if}</div>{/if}
+	{#if subscription.data?.active && subscription.data.until}<div class="panel-sunk p-4 text-sm mb-6"><div class="flex flex-wrap items-center gap-2"><Icon name="check" size={16} class="text-[var(--good)]" />Your plan <b>{PLANS.find((p) => p.id === subscription.data?.planId)?.name??'Administrator'}</b> is active until {date(subscription.data.until, { day: 'numeric', month: 'long',year:'numeric' })}.</div>{#if subscription.data.planId!=='staff'}<button class="ctl ctl-sm mt-3" disabled={busy||!ready} onclick={()=>manage(subscription.data?.cancelAtPeriodEnd?'resume':'cancel')}>{subscription.data.cancelAtPeriodEnd?'Keep subscription':'Cancel renewal'}</button>{/if}</div>{/if}
 	{#if error}<p role="alert" class="panel-sunk p-3 mb-4" style="color:var(--bad)">{error}</p>{/if}{#if notice}<p role="status" class="panel-sunk p-3 mb-4" style="color:var(--good)">{notice}</p>{/if}
 	{#if family.data?.children?.length}<label class="label block mb-5">Who is this plan for?<select class="field mt-2" bind:value={beneficiaryId}><option value="">My account</option>{#each family.data.children as child}<option value={child._id}>{child.name}</option>{/each}</select></label>{/if}
 	<div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -39,7 +41,7 @@
 				<p class="text-xs muted -mt-2">{p.tagline}</p>
 				<p class="num text-2xl font-semibold">{p.priceKobo ? naira(p.priceKobo) : 'Free'}<span class="text-xs muted font-normal"> / {p.period}</span></p>
 				<ul class="text-sm grid gap-1.5">{#each p.features as f}<li class="flex gap-2"><Icon name="check" size={14} class="text-[var(--good)] mt-1" />{f}</li>{/each}</ul>
-				<button class="ctl mt-auto {featured ? 'ctl-primary' : ''}" disabled={busy} onclick={() => buy(p.id)}>{p.cta}</button>
+				<button class="ctl mt-auto {featured ? 'ctl-primary' : ''}" disabled={busy||!ready} onclick={() => buy(p.id)}>{p.cta}</button>
 			</div>
 		{/each}
 	</div>
