@@ -1,9 +1,9 @@
 import { writeFile, readFile } from 'node:fs/promises';
 const productionVars = {
 	PUBLIC_APP_URL: 'https://schoolxense.ewinproject.org', PUBLIC_SITE_URL: 'https://schoolxense.ewinproject.org',
-	PUBLIC_CONVEX_URL: 'https://adjoining-dalmatian-113.eu-west-1.convex.cloud',
-	PUBLIC_CONVEX_SITE_URL: 'https://adjoining-dalmatian-113.eu-west-1.convex.site',
-	PUBLIC_CONVEX_HTTP_ACTIONS_URL: 'https://adjoining-dalmatian-113.eu-west-1.convex.site',
+	PUBLIC_CONVEX_URL: 'https://tacit-snail-617.eu-west-1.convex.cloud',
+	PUBLIC_CONVEX_SITE_URL: 'https://tacit-snail-617.eu-west-1.convex.site',
+	PUBLIC_CONVEX_HTTP_ACTIONS_URL: 'https://tacit-snail-617.eu-west-1.convex.site',
 	PUBLIC_DEMO_MODE: 'false', HIVE_DEMO_MODE: 'false', PAYMENTS_ENABLED:'false', APP_ENV: 'production'
 };
 let toml = '# SchoolXense Cloudflare Pages. Secrets are set through the Cloudflare API or Pages dashboard.\nname = "schoolxense"\npages_build_output_dir = ".svelte-kit/cloudflare"\ncompatibility_date = "2026-09-01"\ncompatibility_flags = ["nodejs_compat"]\n';

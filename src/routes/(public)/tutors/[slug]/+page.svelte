@@ -1,4 +1,6 @@
 <script lang="ts">
+	import {DEMO_MODE} from '$lib/config';
+	import {naira} from '$ui/format';
 	import { hive } from '$hive/store.svelte';
 	import type { Offer } from '$hive/types';
 	import Avatar from '$ui/Avatar.svelte';
@@ -16,7 +18,14 @@
 	let selected = $state<Offer | null>(null);
 </script>
 
-<svelte:head><title>{u.name} · SchoolXense tutor</title></svelte:head>
+{#if !DEMO_MODE && data.tutor}
+<section class="max-w-[1100px] mx-auto px-4 sm:px-6 py-10">
+ <h1 class="text-3xl font-semibold">{data.tutor.name}</h1><p class="muted mt-3">{data.tutor.headline}</p><p class="mt-5">{data.tutor.bio}</p>
+ <h2 class="text-xl font-semibold mt-8">Published offers</h2><div class="grid md:grid-cols-2 gap-4 mt-4">
+ {#each data.tutor.offers as offer}<article class="panel p-5"><h3 class="text-xl font-semibold">{offer.title}</h3><p>{offer.subjects.join(', ')}</p><p class="mt-3">{naira(Number(offer.price))}</p><a href="/book" class="ctl ctl-primary mt-4">Request a session</a></article>{/each}
+ </div><p class="muted mt-5">Booking requires your own verified SchoolXense account and the applicable access plan.</p>
+</section>
+{:else}
 
 <section class="max-w-[1100px] mx-auto px-4 sm:px-6 pt-10">
 	<div class="panel p-6 sm:p-8 grid md:grid-cols-[auto_1fr_auto] gap-6 items-start">
@@ -67,3 +76,4 @@
 </section>
 
 <BookingSheet bind:offer={selected} />
+{/if}

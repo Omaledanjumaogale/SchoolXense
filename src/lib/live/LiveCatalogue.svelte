@@ -4,12 +4,14 @@
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import type {FunctionReturnType} from 'convex/server';
 	import { naira } from '$ui/format';
 	import Icon from '$ui/Icon.svelte';
 	const client = useConvexClient(), auth = useAuth();
 	const kind = $derived<'offers' | 'packs' | 'cohorts'>(page.url.pathname.startsWith('/tutors') ? 'offers' : page.url.pathname.startsWith('/library') ? 'packs' : 'cohorts');
 	const catalogue = useQuery(api.portal.catalogue, () => ({ kind }));
-	const items = $derived((catalogue.data ?? []).filter((item): item is Exclude<typeof item, {quote:string}> => 'title' in item));
+	const initial=$derived((page.data.catalogue??[]) as FunctionReturnType<typeof api.portal.catalogue>);
+	const items = $derived((catalogue.data ?? initial).filter((item): item is Exclude<typeof item, {quote:string}> => 'title' in item));
 	let error = $state(''), busy = $state(false);
 	async function buy(id: string) {
 		if (!auth.isAuthenticated) { await goto(`/login?next=${encodeURIComponent(page.url.pathname)}`); return; }
@@ -24,5 +26,5 @@
 	<p class="eyebrow">Learn with SchoolXense</p><h1 class="text-4xl font-semibold mt-3">{kind === 'offers' ? 'Find your next learning partner' : kind === 'packs' ? 'Explore original study resources' : 'Make progress together'}</h1>
 	<p class="muted mt-4">{kind === 'offers' ? 'Offers from verified tutors, with clear pricing and protected bookings.' : 'Published resources and upcoming cohorts, updated as creators add new material.'}</p>
 	{#if error}<p role="alert" class="mt-5" style="color:var(--bad)">{error}</p>{/if}
-	<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">{#each items as item}<article class="panel p-5"><Icon name={kind === 'offers' ? 'users' : 'book'} size={22} /><h2 class="font-semibold text-xl mt-4">{item.title}</h2><p class="num text-2xl mt-3">{naira(Number(item.price))}</p>{#if kind === 'offers'}<a href="/book" class="ctl ctl-primary mt-5">Request session</a>{:else}<button class="ctl ctl-primary mt-5" disabled={busy} onclick={() => buy(item._id)}>View checkout</button>{/if}</article>{:else}<div class="panel p-6 md:col-span-2"><h2 class="font-semibold">{catalogue.error ? 'Unable to load the catalogue' : catalogue.isLoading ? 'Loading…' : 'New opportunities are on their way'}</h2><p class="muted mt-3">{catalogue.error ? 'Please reconnect and try again.' : 'Published offers and resources will appear here. Contact us if you need help finding the right support.'}</p><a class="ctl mt-4" href="/#enquiries">Send an enquiry</a></div>{/each}</div>
+	<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">{#each items as item}<article class="panel p-5"><Icon name={kind === 'offers' ? 'users' : 'book'} size={22} /><h2 class="font-semibold text-xl mt-4">{#if 'slug' in item}<a href="/library/{encodeURIComponent(item.slug)}">{item.title}</a>{:else if 'hostId' in item}<a href="/cohorts/{item._id}">{item.title}</a>{:else}{item.title}{/if}</h2><p class="num text-2xl mt-3">{naira(Number(item.price))}</p>{#if kind === 'offers'}<a href="/book" class="ctl ctl-primary mt-5">Request session</a>{:else}<button class="ctl ctl-primary mt-5" disabled={busy} onclick={() => buy(item._id)}>View checkout</button>{/if}</article>{:else}<div class="panel p-6 md:col-span-2"><h2 class="font-semibold">{catalogue.error ? 'Unable to load the catalogue' : catalogue.isLoading ? 'Loading…' : 'New opportunities are on their way'}</h2><p class="muted mt-3">{catalogue.error ? 'Please reconnect and try again.' : 'Published offers and resources will appear here. Contact us if you need help finding the right support.'}</p><a class="ctl mt-4" href="/#enquiries">Send an enquiry</a></div>{/each}</div>
 </section>

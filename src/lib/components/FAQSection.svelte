@@ -1,0 +1,2 @@
+<script lang="ts">let {items}:{items:readonly (readonly [string,string])[]}=$props();</script>
+<section aria-labelledby="faq-heading"><h2 id="faq-heading" class="text-2xl font-semibold mb-5">What do learners ask?</h2>{#each items as [question,answer],index}<details class="panel p-4 mb-3"><summary id={'question-'+index} class="cursor-pointer font-semibold">{question}</summary><p class="muted mt-3">{answer}</p></details>{/each}</section>
