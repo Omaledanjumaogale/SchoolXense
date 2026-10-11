@@ -5,6 +5,11 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      preview_only:
+        description: Publish and verify an isolated manual preview
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -41,7 +46,7 @@ jobs:
           name: browser-results
           path: test-results/
   deploy:
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && !inputs.preview_only
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -67,13 +72,13 @@ jobs:
       - run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch main
       - run: node scripts/smoke-live.mjs
   preview-backend:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.preview_only)
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PREVIEW_BRANCH: pr-${{ github.event.pull_request.number }}
-      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+      PREVIEW_BRANCH: pr-${{ github.event.pull_request.number || '0' }}
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY || secrets.PREVIEW_DEPLOY_KEY }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
@@ -86,7 +91,7 @@ jobs:
         id: preview
         run: |
           if [ -n "$CONVEX_DEPLOY_KEY" ]; then
-            case "$CONVEX_DEPLOY_KEY" in preview:*) ;; *) echo "::error::An actual Convex preview key is required"; exit 1 ;; esac
+            case "$CONVEX_DEPLOY_KEY" in preview:elite-workforce:schoolxense\|*) ;; *) echo "::error::A preview key for elite-workforce/schoolxense is required"; exit 1 ;; esac
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
@@ -96,15 +101,22 @@ jobs:
         if: steps.preview.outputs.enabled == 'true'
       - name: Deploy isolated preview backend
         if: steps.preview.outputs.enabled == 'true'
-        run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable --cmd "node scripts/build-preview.mjs" --cmd-url-env-var-name PUBLIC_CONVEX_URL
+        run: npx convex deploy --preview-name "$PREVIEW_BRANCH" --typecheck enable --cmd "node scripts/build-preview.mjs" --cmd-url-env-var-name PUBLIC_CONVEX_URL
       - name: Set branch-specific preview authentication origins
         if: steps.preview.outputs.enabled == 'true'
         run: |
-          npx convex env set SITE_URL "https://pr-${{ github.event.pull_request.number }}.schoolxense.pages.dev" --preview-name "pr-${{ github.event.pull_request.number }}"
-          npx convex env set AUTH_TRUSTED_ORIGINS "https://pr-${{ github.event.pull_request.number }}.schoolxense.pages.dev" --preview-name "pr-${{ github.event.pull_request.number }}"
+          npx convex env set SITE_URL "https://$PREVIEW_BRANCH.schoolxense.pages.dev" --preview-name "$PREVIEW_BRANCH"
+          npx convex env set AUTH_TRUSTED_ORIGINS "https://$PREVIEW_BRANCH.schoolxense.pages.dev" --preview-name "$PREVIEW_BRANCH"
+          auth_secret="$(openssl rand -hex 48)"
+          echo "::add-mask::$auth_secret"
+          printf '%s' "$auth_secret" | npx convex env set BETTER_AUTH_SECRET --preview-name "$PREVIEW_BRANCH"
+          npx convex env set APP_ENV preview --preview-name "$PREVIEW_BRANCH"
+          npx convex env set PAYMENTS_ENABLED false --preview-name "$PREVIEW_BRANCH"
+          npx convex env set PAYOUTS_ENABLED false --preview-name "$PREVIEW_BRANCH"
+          npx convex env set EWIN_SYNC_ENABLED false --preview-name "$PREVIEW_BRANCH"
       - name: Publish isolated Pages preview
         if: steps.preview.outputs.enabled == 'true'
-        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch "pr-${{ github.event.pull_request.number }}"
+        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch "$PREVIEW_BRANCH"
       - name: Verify preview rendered discovery
         if: steps.preview.outputs.enabled == 'true'
-        run: node scripts/check-discovery-live.mjs "https://pr-${{ github.event.pull_request.number }}.schoolxense.pages.dev"
+        run: node scripts/check-discovery-live.mjs "https://$PREVIEW_BRANCH.schoolxense.pages.dev"
