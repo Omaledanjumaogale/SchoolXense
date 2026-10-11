@@ -97,6 +97,11 @@ jobs:
       - name: Deploy isolated preview backend
         if: steps.preview.outputs.enabled == 'true'
         run: npx convex deploy --preview-name "pr-${{ github.event.pull_request.number }}" --typecheck enable --cmd "node scripts/build-preview.mjs" --cmd-url-env-var-name PUBLIC_CONVEX_URL
+      - name: Set branch-specific preview authentication origins
+        if: steps.preview.outputs.enabled == 'true'
+        run: |
+          npx convex env set SITE_URL "https://pr-${{ github.event.pull_request.number }}.schoolxense.pages.dev" --preview-name "pr-${{ github.event.pull_request.number }}"
+          npx convex env set AUTH_TRUSTED_ORIGINS "https://pr-${{ github.event.pull_request.number }}.schoolxense.pages.dev" --preview-name "pr-${{ github.event.pull_request.number }}"
       - name: Publish isolated Pages preview
         if: steps.preview.outputs.enabled == 'true'
         run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch "pr-${{ github.event.pull_request.number }}"
