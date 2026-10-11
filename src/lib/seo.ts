@@ -1,6 +1,7 @@
 export const SITE='https://schoolxense.ewinproject.org';
 export const MOTHER='https://ewinproject.org';
-export interface PageSEO { title:string; description:string; canonical:string; robots:string; image:string; graph:string }
+import type {PageSEO} from './types/seo';
+export type {PageSEO} from './types/seo';
 export const PUBLIC_PAGES:Record<string,{title:string;description:string}>={
  '/':{title:'SchoolXense — Exam practice, tutoring and learning resources',description:'SchoolXense supports Nigerian learners with reviewed exam practice, tutoring and educational resources within the E-WIN Project ecosystem.'},
  '/faq':{title:'SchoolXense frequently asked questions',description:'Answers about SchoolXense signup, free practice limits, paid plans, guardian safeguards, tutoring, payments and mobile installation.'},
