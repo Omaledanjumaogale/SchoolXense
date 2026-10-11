@@ -27,7 +27,7 @@
 <svelte:head><title>Pricing · SchoolXense</title></svelte:head>
 
 <section class="max-w-[1240px] mx-auto px-4 sm:px-6 pt-10">
-	<PageHeader eyebrow="Pricing" title="Student prices. No surprises." sub="Pay by card, bank transfer, USSD or mobile money through Flutterwave. Guardians can pay for a child's plan." />
+	<PageHeader eyebrow="Pricing" title="Student prices. No surprises." sub="Choose Korapay for hosted checkout or Flutterwave for a temporary bank transfer account. Guardians can pay for a child's plan." />
 	{#if subscription.data?.active && subscription.data.until}<div class="panel-sunk p-4 text-sm mb-6"><div class="flex flex-wrap items-center gap-2"><Icon name="check" size={16} class="text-[var(--good)]" />Your plan <b>{PLANS.find((p) => p.id === subscription.data?.planId)?.name??'Administrator'}</b> is active until {date(subscription.data.until, { day: 'numeric', month: 'long',year:'numeric' })}.</div>{#if subscription.data.planId!=='staff'}<button class="ctl ctl-sm mt-3" disabled={busy} onclick={()=>manage(subscription.data?.cancelAtPeriodEnd?'resume':'cancel')}>{subscription.data.cancelAtPeriodEnd?'Keep subscription':'Cancel renewal'}</button>{/if}</div>{/if}
 	{#if error}<p role="alert" class="panel-sunk p-3 mb-4" style="color:var(--bad)">{error}</p>{/if}{#if notice}<p role="status" class="panel-sunk p-3 mb-4" style="color:var(--good)">{notice}</p>{/if}
 	{#if family.data?.children?.length}<label class="label block mb-5">Who is this plan for?<select class="field mt-2" bind:value={beneficiaryId}><option value="">My account</option>{#each family.data.children as child}<option value={child._id}>{child.name}</option>{/each}</select></label>{/if}

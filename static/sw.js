@@ -1,7 +1,12 @@
 // Cache public assets only. Account pages and API responses must stay on the network.
-const VERSION = 'schoolxense-public-v4';
+const VERSION = 'schoolxense-public-v5';
 const OFFLINE_URL = '/offline';
 const SHELL = [OFFLINE_URL, '/favicon.svg', '/manifest.webmanifest'];
+self.addEventListener('push',event=>{
+ let payload={};try{payload=event.data?.json()??{};}catch{}
+ event.waitUntil(self.registration.showNotification('SchoolXense',{body:typeof payload.body==='string'?payload.body.slice(0,200):'Sign in to view your account update.',icon:'/icon-192.png',badge:'/icon-192.png',tag:'schoolxense-account-update',data:{href:'/notifications'}}));
+});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{const target=new URL('/notifications',self.location.origin).href;const existing=clients.find(c=>new URL(c.url).origin===self.location.origin);if(existing){await existing.navigate(target);return existing.focus();}return self.clients.openWindow(target);}));});
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(VERSION).then(async (cache) => {
     await cache.addAll(SHELL);

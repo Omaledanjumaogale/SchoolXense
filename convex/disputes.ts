@@ -1,9 +1,20 @@
 import { v,ConvexError } from 'convex/values';
-import { internalAction,internalQuery,internalMutation } from './_generated/server';
-import { internal } from './_generated/api';
-import { withAccess,audit } from './lib/access';
+import { action,internalAction,internalQuery,internalMutation } from './_generated/server';
+import { api,internal } from './_generated/api';
+import { withAccess,audit,resolve } from './lib/access';
 import { post,systemWallet } from './lib/ledger';
+import {korapay,flutterwaveV4} from '../src/lib/payments/gateways';
 export const queue=withAccess({role:'staff'}).query({args:{},handler:async ctx=>({disputes:await ctx.db.query('disputes').order('desc').take(100),refunds:await ctx.db.query('refundRequests').order('desc').take(100)})});
+export const refundForReview=withAccess({role:'staff'}).query({args:{id:v.id('refundRequests')},handler:async(ctx,a)=>{const r=await ctx.db.get(a.id);if(!r||r.status==='refunded')throw new ConvexError('An unresolved refund is required.');const payment=await ctx.db.get(r.paymentId);if(!payment?.flwTxId)throw new ConvexError('Payment receipt is missing.');return {refund:r,payment};}});
+export const reconcileRefund=action({args:{id:v.id('refundRequests'),providerId:v.string()},handler:async(ctx,a):Promise<void>=>{
+ const {refund:r,payment:p}=await ctx.runQuery(api.disputes.refundForReview,{id:a.id});if(!/^[A-Za-z0-9_-]{3,120}$/.test(a.providerId))throw new ConvexError('Provider refund ID is required.');
+ let completed=false;
+ if(p.gateway==='korapay'){if(a.providerId!=='SX-RF-'+r._id)throw new ConvexError('Refund reference mismatch.');const tx=await korapay<{reference:string;payment_reference:string;amount:number;currency:string;status:string}>(process.env,'/refunds/'+encodeURIComponent(a.providerId));if(tx.reference!==a.providerId||tx.payment_reference!==p.txRef||Math.round(Number(tx.amount)*100)!==Number(p.amount)||tx.currency!==p.currency||tx.status==='failed')throw new ConvexError('Refund receipt requires review.');completed=tx.status==='success';}
+ else if(p.flwTxId!.startsWith('flutterwave-v4:')){const tx=await flutterwaveV4<{id:string;charge_id:string;amount_refunded:number;status:string}>(process.env,'/refunds/'+encodeURIComponent(a.providerId));if(tx.id!==a.providerId||tx.charge_id!==p.flwTxId!.slice('flutterwave-v4:'.length)||Math.round(tx.amount_refunded*100)!==Number(p.amount)||tx.status==='failed')throw new ConvexError('Refund receipt requires review.');completed=tx.status==='succeeded';}
+ else{const response=await fetch('https://api.flutterwave.com/v3/refunds/'+encodeURIComponent(a.providerId),{headers:{Authorization:'Bearer '+process.env.FLW_SECRET_KEY},signal:AbortSignal.timeout(15000)});const tx=await response.json();if(!response.ok||tx.status!=='success'||String(tx.data?.tx_id)!==p.flwTxId||Math.round(Number(tx.data?.amount_refunded)*100)!==Number(p.amount))throw new ConvexError('Refund receipt requires review.');completed=['completed-bank-transfer','completed-momo','completed-mpgs','completed-preauth'].includes(tx.data.status);}
+ await ctx.runMutation(internal.disputes.record,{id:a.id,providerId:a.providerId,completed});await ctx.runMutation(internal.disputes.auditRefund,{id:a.id});
+}});
+export const auditRefund=internalMutation({args:{id:v.id('refundRequests')},handler:async(ctx,a)=>{const {user}=await resolve(ctx,{role:'staff'});await audit(ctx,user._id,'refund.reconcile',a.id,'Provider receipt verified; no new refund submitted.');}});
 export const decide=withAccess({role:'staff'}).mutation({args:{id:v.id('disputes'),decision:v.union(v.literal('under_review'),v.literal('release'),v.literal('refund')),note:v.string()},handler:async(ctx,a)=>{
  const d=await ctx.db.get(a.id),b=d&&await ctx.db.get(d.bookingId);
  if(!d||!b||!['open','under_review'].includes(d.status)||[d.openedBy,b.tutorId,b.learnerId].includes(ctx.user._id)||a.note.trim().length<10||a.note.length>2000)throw new ConvexError('INDEPENDENT_REVIEW_REQUIRED');
@@ -28,9 +39,23 @@ export const record=internalMutation({args:{id:v.id('refundRequests'),providerId
  await ctx.db.insert('notifications',{userId:p.userId,title:'Refund verified',body:'Your booking refund has been confirmed by the payment provider.',read:false});
 }});
 export const processRefunds=internalAction({args:{},handler:async(ctx):Promise<void>=>{
- if(process.env.REFUNDS_ENABLED!=='true'||!process.env.FLW_SECRET_KEY)return;
+ if(process.env.REFUNDS_ENABLED!=='true'||process.env.APP_ENV==='preview')return;
  const rows=await ctx.runQuery(internal.disputes.pending,{});
  for(const r of rows){if(r.status==='queued'&&!await ctx.runMutation(internal.disputes.claim,{id:r._id}))continue;
- try{if(!r.payment?.flwTxId)throw new Error('Missing original transaction');const response=await fetch(r.providerId?`https://api.flutterwave.com/v3/refunds/${encodeURIComponent(r.providerId)}`:`https://api.flutterwave.com/v3/transactions/${encodeURIComponent(r.payment.flwTxId)}/refund`,{method:r.providerId?'GET':'POST',headers:{Authorization:'Bearer '+process.env.FLW_SECRET_KEY,'Content-Type':'application/json'},body:r.providerId?undefined:JSON.stringify({amount:Number(r.payment.amount)/100,comments:'SchoolXense approved booking dispute'}),signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok||data.status!=='success'||String(data.data?.tx_id)!==r.payment.flwTxId||Math.round(Number(data.data?.amount_refunded)*100)!==Number(r.payment.amount))throw new Error('Provider receipt mismatch');await ctx.runMutation(internal.disputes.record,{id:r._id,providerId:String(data.data.id),completed:['completed-bank-transfer','completed-momo','completed-mpgs','completed-preauth'].includes(data.data.status)});
+ try{if(!r.payment?.flwTxId)throw new Error('Missing original transaction');
+ if(r.payment.gateway==='korapay'){
+ const reference='SX-RF-'+r._id;
+ const tx=await korapay<{refund_reference?:string;reference?:string;payment_reference:string;status:string;amount?:number;amount_returned?:number;currency:string}>(process.env,r.providerId?'/refunds/'+encodeURIComponent(r.providerId):'/refunds/initiate',r.providerId?undefined:{payment_reference:r.payment.txRef,reference,amount:Number(r.payment.amount)/100,reason:'SchoolXense approved booking dispute'});
+ if(tx.payment_reference!==r.payment.txRef||tx.currency!=='NGN'||Math.round(Number(tx.amount_returned??tx.amount)*100)!==Number(r.payment.amount)||(tx.refund_reference??tx.reference)!==reference)throw new Error('Refund receipt mismatch');
+ if(tx.status==='failed')throw new Error('Refund failed');
+ await ctx.runMutation(internal.disputes.record,{id:r._id,providerId:reference,completed:tx.status==='success'});continue;
+ }
+ if(r.payment.flwTxId.startsWith('flutterwave-v4:')){
+ const charge=r.payment.flwTxId.slice('flutterwave-v4:'.length);
+ const tx=await flutterwaveV4<{id:string;charge_id:string;amount_refunded:number;status:string}>(process.env,r.providerId?'/refunds/'+encodeURIComponent(r.providerId):'/refunds',r.providerId?undefined:{charge_id:charge,amount:Number(r.payment.amount)/100,reason:'SchoolXense approved booking dispute'},'SX-RF-'+r._id);
+ if(tx.charge_id!==charge||Math.round(tx.amount_refunded*100)!==Number(r.payment.amount))throw new Error('Refund receipt mismatch');
+ await ctx.runMutation(internal.disputes.record,{id:r._id,providerId:tx.id,completed:tx.status==='succeeded'});continue;
+ }
+ const response=await fetch(r.providerId?`https://api.flutterwave.com/v3/refunds/${encodeURIComponent(r.providerId)}`:`https://api.flutterwave.com/v3/transactions/${encodeURIComponent(r.payment.flwTxId)}/refund`,{method:r.providerId?'GET':'POST',headers:{Authorization:'Bearer '+process.env.FLW_SECRET_KEY,'Content-Type':'application/json'},body:r.providerId?undefined:JSON.stringify({amount:Number(r.payment.amount)/100,comments:'SchoolXense approved booking dispute'}),signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok||data.status!=='success'||String(data.data?.tx_id)!==r.payment.flwTxId||Math.round(Number(data.data?.amount_refunded)*100)!==Number(r.payment.amount))throw new Error('Provider receipt mismatch');await ctx.runMutation(internal.disputes.record,{id:r._id,providerId:String(data.data.id),completed:['completed-bank-transfer','completed-momo','completed-mpgs','completed-preauth'].includes(data.data.status)});
  }catch{await ctx.runMutation(internal.disputes.record,{id:r._id,error:'Provider outcome requires reconciliation; automatic refund retry is blocked.',completed:false});}}
 }});

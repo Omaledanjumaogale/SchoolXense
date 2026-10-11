@@ -2,6 +2,8 @@ import { cronJobs } from 'convex/server';
 import { internal } from './_generated/api';
 
 const crons = cronJobs();
+crons.interval('deliver opted-in web push',{minutes:1},internal.push.dispatch,{});
+crons.interval('refresh email delivery outcomes',{minutes:5},internal.emailDelivery.refresh,{});
 // Escrows release 48h after delivery when not disputed.
 crons.interval('release due escrows', { minutes: 15 }, internal.money.releaseDue, {});
 // No external request occurs unless the agreed ecosystem transport is explicitly enabled.

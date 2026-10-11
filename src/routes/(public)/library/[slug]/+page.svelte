@@ -42,7 +42,7 @@
 			<p class="num text-3xl font-semibold">{naira(p.priceKobo)}</p>
 			<div class="flex items-center gap-3 text-sm"><Stars value={p.rating} /><span class="muted num">{p.sales} sold</span></div>
 			<span class="badge badge-good w-fit"><Icon name="shield-check" size={12} />Originality check passed · {Math.round(p.originality * 100)}% similarity</span>
-			{#if owned}<span class="ctl" data-pressed="true"><Icon name="check" size={16} />Owned</span>{:else}<button class="ctl ctl-primary" onclick={buy}><Icon name="lock" size={16} />Buy with Flutterwave</button>{/if}
+			{#if owned}<span class="ctl" data-pressed="true"><Icon name="check" size={16} />Owned</span>{:else}<button class="ctl ctl-primary" onclick={buy}><Icon name="lock" size={16} />Choose payment gateway</button>{/if}
 			<p class="text-xs muted">Schools can licence packs for whole classes from the institution console.</p>
 		</div>
 		<div class="panel p-5"><p class="eyebrow mb-3">Where your money goes</p><HiveShare kind="pack" grossKobo={p.priceKobo} referrer={!!a.referredBy} /></div>

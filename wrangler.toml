@@ -13,7 +13,7 @@ PUBLIC_CONVEX_SITE_URL = "https://tacit-snail-617.eu-west-1.convex.site"
 PUBLIC_CONVEX_HTTP_ACTIONS_URL = "https://tacit-snail-617.eu-west-1.convex.site"
 PUBLIC_DEMO_MODE = "false"
 HIVE_DEMO_MODE = "false"
-PAYMENTS_ENABLED = "false"
+PAYMENTS_ENABLED = "true"
 APP_ENV = "production"
 
 [[r2_buckets]]
@@ -61,7 +61,7 @@ PUBLIC_CONVEX_SITE_URL = "https://tacit-snail-617.eu-west-1.convex.site"
 PUBLIC_CONVEX_HTTP_ACTIONS_URL = "https://tacit-snail-617.eu-west-1.convex.site"
 PUBLIC_DEMO_MODE = "false"
 HIVE_DEMO_MODE = "false"
-PAYMENTS_ENABLED = "false"
+PAYMENTS_ENABLED = "true"
 APP_ENV = "production"
 
 [[env.production.r2_buckets]]

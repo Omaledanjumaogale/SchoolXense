@@ -5,15 +5,29 @@
  * 3. Calls Convex money.settlePayment (idempotent on flwTxId) via the internal HTTP route.
  * Duplicate events are dropped by transaction id; failures retry with backoff.
  */
-export interface Env { FLW_SECRET_KEY: string; CONVEX_SITE_URL: string; INTERNAL_WEBHOOK_TOKEN: string; PAYMENTS_ENABLED?: string }
-type Msg = { id: string; txRef: string; type: string };
+import {verifyGatewayPayment,korapay} from '../../../src/lib/payments/gateways';
+export interface Env { FLW_SECRET_KEY: string; FLW_CLIENT_ID?:string; KORAPAY_SECRET_KEY?:string; CONVEX_SITE_URL: string; INTERNAL_WEBHOOK_TOKEN: string; PAYMENTS_ENABLED?: string }
+type Msg = { id: string; txRef: string; type: string; gateway?:'flutterwave'|'korapay' };
 
 export default {
 	async queue(batch: MessageBatch<Msg>, env: Env): Promise<void> {
 		for (const m of batch.messages) {
 			const { id, type } = m.body;
 			try {
-				if (env.PAYMENTS_ENABLED !== 'true' || !env.FLW_SECRET_KEY || !env.INTERNAL_WEBHOOK_TOKEN) throw new Error('Payment processing is disabled');
+				if (env.PAYMENTS_ENABLED !== 'true' || !env.INTERNAL_WEBHOOK_TOKEN) throw new Error('Payment processing is disabled');
+				if(m.body.gateway){
+				 if(type.startsWith('transfer.')){
+				  if(m.body.gateway!=='korapay')throw new Error('Transfer verification unavailable');
+				  const tx=await korapay<{reference:string;status:string;amount:number;currency:string}>(env,'/transactions/'+encodeURIComponent(id));
+				  if(tx.reference!==id||!['success','failed'].includes(tx.status))throw new Error('Transfer identity or terminal status mismatch');
+				  await settle(env,{kind:'transfer',txRef:tx.reference,flwTxId:'korapay:'+tx.reference,success:tx.status==='success',amountKobo:String(Math.round(Number(tx.amount)*100)),currency:tx.currency});
+				 }else{
+				  const tx=await verifyGatewayPayment(m.body.gateway,env,id);
+				  if(tx.status==='pending')throw new Error('Payment is not terminal');
+				  if(tx.status==='successful')await settle(env,{kind:'payment',gateway:m.body.gateway,txRef:tx.txRef,flwTxId:tx.id,amountKobo:String(tx.amountKobo),currency:tx.currency});
+				 }
+				 m.ack();continue;
+				}
 				if (!/^\d+$/.test(id)) throw new Error('Invalid provider transaction id');
 				if (type === 'transfer.completed') {
 					const t = await flw<{ status: string; reference: string; id: number; amount: number; currency: string }>(env, `/transfers/${id}`);

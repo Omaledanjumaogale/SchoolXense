@@ -1,0 +1,15 @@
+<script lang="ts">
+ import {onMount} from 'svelte';
+ import {useQuery,useConvexClient} from 'convex-svelte';
+ import {api} from '$convex/_generated/api';
+ import {useAuth} from '@mmailaender/convex-better-auth-svelte/svelte';
+ import {transactionLocales} from '$lib/i18n/transactions';
+ const auth=useAuth(),client=useConvexClient(),configuration=useQuery(api.push.configuration,()=>auth.isAuthenticated?{}:'skip');
+ let supported=$state(false),active=$state(false),busy=$state(false),message=$state(''),locale=$state('en');
+ onMount(async()=>{supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;if(supported){const registration=await navigator.serviceWorker.ready;active=!!await registration.pushManager.getSubscription();}});
+ async function toggle(){busy=true;message='';try{const registration=await navigator.serviceWorker.ready;const existing=await registration.pushManager.getSubscription();
+ if(existing){await client.mutation(api.push.unsubscribe,{endpoint:existing.endpoint});await existing.unsubscribe();active=false;message='Notifications disabled for this browser.';}
+ else{if(!configuration.data?.publicKey)throw new Error('Push is not configured.');if(await Notification.requestPermission()!=='granted')throw new Error('Allow notifications in your browser settings to enable this.');const key=configuration.data.publicKey;const bytes=Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));const subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});const json=subscription.toJSON();try{await client.mutation(api.push.subscribe,{endpoint:subscription.endpoint,p256dh:json.keys!.p256dh,auth:json.keys!.auth,locale});}catch(e){await subscription.unsubscribe();throw e;}active=true;message='Notifications enabled. Private details are shown only after sign-in.';}
+ }catch(e){message=e instanceof Error?e.message:'Unable to update notifications.';}finally{busy=false;}}
+</script>
+<section class="panel p-5 mb-5"><h2 class="text-xl font-semibold">Browser notifications</h2><p class="muted mt-2">Receive a private reminder when your account has an update. You can disable it at any time on this device.</p><label class="block mt-3">Notification language <select class="ctl" bind:value={locale} disabled={active||busy}>{#each transactionLocales as value}<option value={value}>{value.toUpperCase()}</option>{/each}</select></label><button class="ctl mt-3" disabled={!supported||busy||(!active&&!configuration.data?.enabled)} onclick={toggle}>{busy?'Saving…':active?'Disable notifications':'Enable notifications'}</button>{#if !supported}<p class="text-sm muted mt-2">This browser does not support Web Push. On iPhone or iPad, install the app on your Home Screen first.</p>{/if}{#if message}<p role="status" class="mt-3">{message}</p>{/if}</section>

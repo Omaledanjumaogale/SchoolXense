@@ -23,6 +23,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.4",
+    "@types/web-push": "^3.6.4",
     "convex-test": "^0.0.60",
     "svelte": "^5.57.1",
     "svelte-check": "^4.3.0",
@@ -46,7 +47,8 @@
     "better-auth": "~1.6.33",
     "convex": "^1.27.0",
     "convex-helpers": "^0.1.100",
-    "convex-svelte": "^0.14.0"
+    "convex-svelte": "^0.14.0",
+    "web-push": "^3.6.7"
   },
   "overrides": {
     "sharp": "0.35.5",

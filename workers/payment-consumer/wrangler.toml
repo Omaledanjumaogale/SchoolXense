@@ -10,7 +10,7 @@ dead_letter_queue = "schoolxense-payment-dlq"
 
 [vars]
 CONVEX_SITE_URL = "https://tacit-snail-617.eu-west-1.convex.site"
-PAYMENTS_ENABLED = "false"
+PAYMENTS_ENABLED = "true"
 # secrets: FLW_SECRET_KEY, INTERNAL_WEBHOOK_TOKEN
 
 [env.preview]
@@ -28,7 +28,7 @@ dead_letter_queue = "schoolxense-payment-dlq-preview"
 name = "schoolxense-payment-consumer"
 [env.production.vars]
 CONVEX_SITE_URL = "https://tacit-snail-617.eu-west-1.convex.site"
-PAYMENTS_ENABLED = "false"
+PAYMENTS_ENABLED = "true"
 [[env.production.queues.consumers]]
 queue = "schoolxense-payment-events"
 max_batch_size = 20

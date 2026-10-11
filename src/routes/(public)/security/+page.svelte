@@ -6,11 +6,11 @@
 
 <Prose eyebrow="Security" title="How we protect your account and your money." updated="2 Oct 2026">
 	<h2>Money</h2>
-	<ul><li>Flutterwave webhooks are checked against our secret hash, then every transaction is re-verified with Flutterwave by id before we credit anything.</li><li>Ledger writes are idempotent on the Flutterwave transaction id and double-entry: every movement is two or more rows that sum to zero.</li><li>Payouts go only to name-matched bank or mobile-money accounts; manual payouts above ₦500,000 need two staff approvals.</li><li>A daily job reconciles our ledger with Flutterwave settlement reports.</li><li>Funds between payment and release are held with a licensed partner; the ledger records ownership.</li></ul>
+	<ul><li>Flutterwave and Korapay webhook signatures are checked, and successful payment receipts are independently verified with the provider before access or wallet credit is granted.</li><li>Ledger entries use provider-specific transaction identifiers to prevent duplicate credits. Entries record the ownership of funds.</li><li>Payouts require a verified, name-matched bank account and two independent staff approvals. Uncertain transfers require receipt reconciliation before another attempt.</li><li>Administrators can verify payment, refund and payout receipts against their provider records.</li></ul>
 	<h2>Access</h2>
-	<ul><li>Every backend function declares the role and tenant it needs through one access wrapper; tenant isolation is tested on every release.</li><li>Staff use SSO with hardware keys and least-privilege roles. Sensitive actions are written to an append-only audit log, exported weekly.</li></ul>
+	<ul><li>Protected backend operations check the authenticated account, role and relevant access conditions. Paid features check subscription dates and verified payment ownership.</li><li>Sensitive administrative decisions are recorded in the audit log.</li></ul>
 	<h2>Edge</h2>
-	<ul><li>Cloudflare WAF managed rules, Turnstile on sign-up, login, checkout and AI endpoints, and per-IP and per-user rate limits.</li><li>Strict security headers: CSP with nonces, HSTS, frame-ancestors none. Secrets live only in Workers secrets.</li></ul>
+	<ul><li>Security headers and operation-specific rate limits help protect the application. Payment and authentication secrets remain in server-side deployment configuration.</li></ul>
 	<h2>Report a vulnerability</h2>
-	<p>Email <a href="mailto:security@schoolxense.ng">security@schoolxense.ng</a>. We acknowledge within 48 hours.</p>
+	<p>Email <a href="mailto:support@ewinproject.org">support@ewinproject.org</a>. We acknowledge within 48 hours.</p>
 </Prose>

@@ -112,7 +112,7 @@
 		<div class="relative">
 			<p class="eyebrow" style="color:var(--brand)">The Hive Share</p>
 			<h2 class="text-3xl font-semibold mt-2">Every naira is split before anyone is paid.</h2>
-			<p class="mt-3 text-[var(--text-2)]">The earner, the platform, whoever referred them, the tutor who handed off the booking and the Learner Impact Fund all gain from the same transaction — recorded in a double-entry ledger, paid out daily through Flutterwave.</p>
+			<p class="mt-3 text-[var(--text-2)]">The earner, the platform, whoever referred them, the tutor who handed off the booking and the Learner Impact Fund all gain from the same transaction — recorded in a double-entry ledger, eligible for approved payouts through Korapay.</p>
 			<ul class="mt-5 grid gap-2 text-sm">
 				<li class="flex gap-2"><Icon name="check" size={16} class="text-[var(--good)] mt-0.5" />Unattributed slices go back to the platform — never to nobody.</li>
 				<li class="flex gap-2"><Icon name="check" size={16} class="text-[var(--good)] mt-0.5" />No shares paid on refunded or disputed money.</li>
@@ -153,7 +153,7 @@
 	{#each [
 		{ t: 'Integrity first', d: 'We help people learn. We never sell completed assignments, projects, theses or exam answers. Requests for that are blocked; tutors who accept them are removed.', href: '/integrity', icon: 'shield-check' },
 		{ t: 'Safe for under-18s', d: 'Guardian consent before any booking, guardians in every thread, recorded sessions kept 30 days, approved-for-minors badges and a staffed 24-hour report queue.', href: '/safety', icon: 'heart' },
-		{ t: 'Your money, protected', d: 'Webhooks verified and re-checked with Flutterwave, idempotent ledger writes, payouts only to name-matched accounts, daily reconciliation.', href: '/security', icon: 'lock' }
+		{ t: 'Your money, protected', d: 'Signed webhooks verified and receipts re-checked with the selected payment provider, idempotent ledger writes, payouts only to name-matched accounts, daily reconciliation.', href: '/security', icon: 'lock' }
 	] as t}
 		<a href={t.href} class="panel card-interactive p-6 flex flex-col gap-3">
 			<span style="color:var(--good)"><Icon name={t.icon} size={24} /></span>

@@ -15,6 +15,7 @@ declare global {
 				PAYMENTS_ENABLED?: string;
 				FLW_SECRET_HASH?: string;
 				FLW_SECRET_KEY?: string;
+				KORAPAY_SECRET_KEY?: string;
 				ANTHROPIC_API_KEY?: string;
 				AI_GATEWAY_URL?: string;
 				HIVE_DEMO_MODE?: string;

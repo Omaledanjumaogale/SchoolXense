@@ -14,20 +14,24 @@ import { workflows } from './components';
 import { planById } from '../src/lib/payments/plans';
 import { entitlement } from './lib/entitlements';
 import { createBundle, SESSION_COUNT, activeHold } from './lib/tutorBundle';
+import { korapay } from '../src/lib/payments/gateways';
+import { decryptAccount } from './lib/bankEncryption';
 
 const KIND: Record<string, TxnKind> = { booking: 'session', cohort: 'session', pack: 'pack', contract: 'collab', subscription: 'subscription', exam_pass: 'subscription', invoice: 'licence' };
 const ESCROWED = new Set(['booking', 'cohort', 'contract']);
 
 /** Called by the payment-events Queue consumer AFTER it re-verified the transaction with Flutterwave. Idempotent on flwTxId. */
 export const settlePayment = internalMutation({
-	args: { txRef: v.string(), flwTxId: v.string(), amountKobo: v.int64(), currency: v.string(), method: v.optional(v.string()) },
+	args: { txRef: v.string(), flwTxId: v.string(), amountKobo: v.int64(), currency: v.string(), method: v.optional(v.string()), gateway:v.optional(v.union(v.literal('flutterwave'),v.literal('korapay'))) },
 	handler: async (ctx, a) => {
 		const dup = await ctx.db.query('payments').withIndex('by_flwTxId', (q) => q.eq('flwTxId', a.flwTxId)).unique();
-		if (dup) { if(dup.txRef!==a.txRef)throw new ConvexError('TRANSACTION_REFERENCE_MISMATCH');return { ok: true, duplicate: true }; }
+		if (dup) { if(dup.txRef!==a.txRef||(dup.gateway??'flutterwave')!==(a.gateway??'flutterwave')||(dup.providerAmountKobo??dup.amount)!==a.amountKobo||dup.currency!==a.currency)throw new ConvexError('TRANSACTION_REFERENCE_MISMATCH');return { ok: true, duplicate: true }; }
 		const p = await ctx.db.query('payments').withIndex('by_txRef', (q) => q.eq('txRef', a.txRef)).unique();
 		if (!p) throw new ConvexError('UNKNOWN_TX_REF');
+		if ((p.gateway??'flutterwave')!==(a.gateway??'flutterwave'))throw new ConvexError('PAYMENT_GATEWAY_MISMATCH');
+		if(a.gateway==='korapay'&&a.flwTxId!=='korapay:'+p.txRef)throw new ConvexError('TRANSACTION_REFERENCE_MISMATCH');
 		if (p.status !== 'pending') return { ok: true, duplicate: true };
-		if (a.amountKobo !== p.amount || a.currency !== p.currency) throw new ConvexError('AMOUNT_OR_CURRENCY_MISMATCH');
+		if (a.amountKobo !== (p.providerAmountKobo??p.amount) || a.currency !== p.currency) throw new ConvexError('AMOUNT_OR_CURRENCY_MISMATCH');
 		if(p.refId?.startsWith('plus_tutor:')&&!activeHold(p))throw new ConvexError('EXPIRED_HOLD_REQUIRES_RECONCILIATION');
 		if (!p.refId || !KIND[p.purpose]) throw new ConvexError('Invalid order purpose.');
 		if(p.purpose==='booking'){const booking=await ctx.db.get(p.refId as Id<'bookings'>);if(booking?.status!=='pending_payment'||booking.price!==p.amount)throw new ConvexError('Booking requires manual reconciliation.');}
@@ -160,11 +164,12 @@ export const requestPayout = withAccess({ adultOnly: true }).mutation({
 		if (!acct?.nameMatched || !sameAccountName(ctx.user.name, acct.accountName)) throw new ConvexError('NO_MATCHED_ACCOUNT');
 		const w = await userWallet(ctx, ctx.user._id);
 		if ((await balance(ctx, w)) < amountKobo) throw new ConvexError('INSUFFICIENT_FUNDS');
-		if(process.env.PAYOUTS_ENABLED!=='true')throw new ConvexError('PAYOUTS_UNAVAILABLE');
+		if(process.env.PAYOUTS_ENABLED!=='true'||process.env.APP_ENV==='preview')throw new ConvexError('PAYOUTS_UNAVAILABLE');
 		if(!acct.flwRecipientRef)throw new ConvexError('NO_VERIFIED_RECIPIENT');
 		const reference = `SX-PO-${crypto.randomUUID()}`;
 		await post(ctx, `payout:${reference}`, [{ walletId: w, amount: -amountKobo, kind: 'payout', memo: reference }, { walletId: await systemWallet(ctx, 'payouts_out'), amount: amountKobo, kind: 'payout', memo: reference }]);
-		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status:'awaiting_approval', reference, approvals: [], recipientRef: acct.flwRecipientRef });
+		if(process.env.PAYOUT_PROVIDER==='korapay'&&acct.gateway!=='korapay')throw new ConvexError('REVERIFY_BANK_ACCOUNT');
+		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status:'awaiting_approval', reference, approvals: [], recipientRef: acct.flwRecipientRef, gateway:acct.gateway });
 		await audit(ctx, ctx.user._id, 'payouts.request', reference);
 	}
 });
@@ -176,13 +181,20 @@ export const runPayouts = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		// Bank recipient storage and transfer reconciliation require a separate activation gate.
-		if (process.env.PAYOUTS_ENABLED !== 'true' || !process.env.FLW_SECRET_KEY) return;
+		if (process.env.PAYOUTS_ENABLED !== 'true'||process.env.APP_ENV==='preview') return;
 		const queued = await ctx.runQuery(internal.money.queuedPayouts, {});
 		if (!queued.length) return;
 		for (const payout of queued) {
 			const claimed = await ctx.runMutation(internal.money.claimPayout, { id: payout._id });
 			if (!claimed) continue;
 			try {
+				if(claimed.gateway==='korapay'){
+				 const account=await ctx.runQuery(internal.money.payoutRouting,{id:payout._id});
+				 const number=await decryptAccount(account.ciphertext,account.iv,claimed.userId);
+				 const tx=await korapay<{reference:string;status:string}>(process.env,'/transactions/disburse',{reference:claimed.reference,destination:{type:'bank_account',amount:Number(claimed.amount)/100,currency:'NGN',narration:'SchoolXense earnings',bank_account:{bank:account.bankCode,account:number},customer:{name:account.name,email:account.email}},notification_url:process.env.SITE_URL+'/api/webhooks/korapay'});
+				 if(tx.reference!==claimed.reference)throw new Error('Provider reference mismatch');
+				 await ctx.runMutation(internal.money.recordPayoutDispatch,{id:payout._id,transferId:'korapay:'+tx.reference});continue;
+				}
 				const response = await fetch('https://api.flutterwave.com/v3/transfers', { method: 'POST', headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ beneficiary: Number(claimed.recipientRef), amount: Number(claimed.amount) / 100, currency: 'NGN', debit_currency: 'NGN', reference: claimed.reference, narration: 'SchoolXense earnings' }), signal: AbortSignal.timeout(20000) });
 				const result = await response.json();
 				if (!response.ok || result.status !== 'success' || !result.data?.id) throw new Error('Provider acceptance was not confirmed.');
@@ -195,7 +207,7 @@ export const runPayouts = internalAction({
 	}
 });
 export const claimPayout = internalMutation({ args: { id: v.id('payouts') }, handler: async (ctx, { id }) => {
-	if (process.env.PAYOUTS_ENABLED !== 'true') return null;
+	if (process.env.PAYOUTS_ENABLED !== 'true'||process.env.APP_ENV==='preview') return null;
 	const payout = await ctx.db.get(id);
 	if (!payout || payout.status !== 'queued' || new Set(payout.approvals).size < 2) return null;
 	const owner = await ctx.db.get(payout.userId);
@@ -205,10 +217,16 @@ export const claimPayout = internalMutation({ args: { id: v.id('payouts') }, han
 		if (approverId === payout.userId || approver?.status !== 'active' || !await hasRole(ctx, approverId, 'staff')) throw new ConvexError('PAYOUT_APPROVAL_REVIEW_REQUIRED');
 	}
 	const account = await ctx.db.query('payoutAccounts').withIndex('by_user', q => q.eq('userId', payout.userId)).unique();
-	if (!account?.nameMatched || !sameAccountName(owner.name, account.accountName) || !account.flwRecipientRef || !/^\d+$/.test(account.flwRecipientRef) || (payout.recipientRef && payout.recipientRef !== account.flwRecipientRef)) throw new ConvexError('PAYOUT_RECIPIENT_RECONCILIATION_REQUIRED');
+	if (!account?.nameMatched || !sameAccountName(owner.name, account.accountName) || !account.flwRecipientRef || (payout.gateway==='korapay'?account.gateway!=='korapay'||!account.ciphertext||!account.iv:!/^\d+$/.test(account.flwRecipientRef)) || (payout.recipientRef && payout.recipientRef !== account.flwRecipientRef)) throw new ConvexError('PAYOUT_RECIPIENT_RECONCILIATION_REQUIRED');
 	await ctx.db.patch(id, { status: 'processing', recipientRef: account.flwRecipientRef });
 	return { ...payout, recipientRef: account.flwRecipientRef };
 } });
+export const payoutRouting=internalQuery({args:{id:v.id('payouts')},handler:async(ctx,{id})=>{
+ const p=await ctx.db.get(id);if(p?.status!=='processing'||p.gateway!=='korapay')throw new ConvexError('FORBIDDEN');
+ const a=await ctx.db.query('payoutAccounts').withIndex('by_user',q=>q.eq('userId',p.userId)).unique(),u=await ctx.db.get(p.userId);
+ if(!a?.ciphertext||!a.iv||!u?.email)throw new ConvexError('PAYOUT_ROUTING_REQUIRED');
+ return {ciphertext:a.ciphertext,iv:a.iv,bankCode:a.bankCode,name:u.name,email:u.email};
+}});
 export const recordPayoutDispatch = internalMutation({ args: { id: v.id('payouts'), transferId: v.optional(v.string()), error: v.optional(v.string()) }, handler: async (ctx, args) => {
 	const payout = await ctx.db.get(args.id);
 	if (!payout || payout.status !== 'processing') return;
@@ -217,10 +235,17 @@ export const recordPayoutDispatch = internalMutation({ args: { id: v.id('payouts
 export const payoutForReconciliation = withAccess({ role: 'staff' }).query({ args: { id: v.id('payouts') }, handler: async (ctx, { id }) => {
 	const payout = await ctx.db.get(id);
 	if (!payout || payout.status !== 'processing') throw new ConvexError('An in-progress payout is required.');
-	return { reference: payout.reference, amount: payout.amount, transferId: payout.flwTransferId };
+	return { reference: payout.reference, amount: payout.amount, transferId: payout.flwTransferId,gateway:payout.gateway };
 } });
 export const reconcilePayout = action({ args: { id: v.id('payouts'), providerTransferId: v.string() }, handler: async (ctx, args): Promise<void> => {
 	const payout = await ctx.runQuery(api.money.payoutForReconciliation, { id: args.id });
+	if(payout.gateway==='korapay'){
+	 if(args.providerTransferId!=='korapay:'+payout.reference)throw new ConvexError('Matching provider reference required.');
+	 const tx=await korapay<{reference:string;status:string;amount:number;currency:string}>(process.env,'/transactions/'+encodeURIComponent(payout.reference));
+	 if(tx.reference!==payout.reference||!['success','failed'].includes(tx.status))throw new ConvexError('Provider has not confirmed a terminal transfer.');
+	 await ctx.runMutation(internal.money.closePayout,{reference:payout.reference,flwTransferId:args.providerTransferId,success:tx.status==='success',amountKobo:BigInt(Math.round(tx.amount*100)),currency:tx.currency});
+	 await ctx.runMutation(internal.money.auditReconciliation,{id:args.id});return;
+	}
 	if (!/^\d+$/.test(args.providerTransferId) || !process.env.FLW_SECRET_KEY) throw new ConvexError('A valid provider transfer ID is required.');
 	const response = await fetch(`https://api.flutterwave.com/v3/transfers/${args.providerTransferId}`, { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }, signal: AbortSignal.timeout(15000) });
 	const result = await response.json();
@@ -240,7 +265,7 @@ export const closePayout = internalMutation({
 	handler: async (ctx, a) => {
 		const p = await ctx.db.query('payouts').withIndex('by_reference', (q) => q.eq('reference', a.reference)).unique();
 		if (!p || p.status === 'paid' || p.status === 'failed') return;
-		if (p.status !== 'processing' || p.amount !== a.amountKobo || a.currency !== 'NGN' || (p.flwTransferId && p.flwTransferId !== a.flwTransferId)) throw new ConvexError('TRANSFER_RECONCILIATION_MISMATCH');
+		if (p.status !== 'processing' || p.amount !== a.amountKobo || a.currency !== 'NGN' || (p.gateway==='korapay'&&a.flwTransferId!=='korapay:'+p.reference) || (p.flwTransferId && p.flwTransferId !== a.flwTransferId)) throw new ConvexError('TRANSFER_RECONCILIATION_MISMATCH');
 		if (a.success) return ctx.db.patch(p._id, { status: 'paid', flwTransferId: a.flwTransferId });
 		await post(ctx, `payout-fail:${a.reference}`, [{ walletId: await systemWallet(ctx, 'payouts_out'), amount: -p.amount, kind: 'payout', memo: 'returned' }, { walletId: await userWallet(ctx, p.userId), amount: p.amount, kind: 'payout', memo: `Returned ${a.reference}` }]);
 		await ctx.db.patch(p._id, { status: 'failed' });
@@ -258,3 +283,4 @@ export const approvePayout = withAccess({ role: 'staff' }).mutation({
 		await audit(ctx, ctx.user._id, 'payouts.approve', p.reference, `${approvals.length}/2`);
 	}
 });
+export const dispatchApprovedPayouts=withAccess({role:'staff'}).mutation({args:{},handler:async ctx=>{if(process.env.PAYOUTS_ENABLED!=='true'||process.env.APP_ENV==='preview')throw new ConvexError('PAYOUTS_UNAVAILABLE');await ctx.scheduler.runAfter(0,internal.money.runPayouts,{});await audit(ctx,ctx.user._id,'payouts.dispatch_approved','queue','Only independently approved, unclaimed requests can be dispatched.');}});

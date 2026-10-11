@@ -25,9 +25,9 @@ http.route({
 	method: 'POST',
 	handler: httpAction(async (ctx, req) => {
 		if (!process.env.INTERNAL_WEBHOOK_TOKEN || req.headers.get('authorization') !== `Bearer ${process.env.INTERNAL_WEBHOOK_TOKEN}`) return new Response('forbidden', { status: 403 });
-		const b = (await req.json()) as { txRef: string; flwTxId: string; amountKobo: string; currency: string; method?: string; kind: 'payment' | 'transfer'; success?: boolean };
+		const b = (await req.json()) as { txRef: string; flwTxId: string; amountKobo: string; currency: string; method?: string; gateway?:'flutterwave'|'korapay'; kind: 'payment' | 'transfer'; success?: boolean };
 		if (b.kind === 'transfer') await ctx.runMutation(internal.money.closePayout, { reference: b.txRef, success: !!b.success, flwTransferId: b.flwTxId, amountKobo: BigInt(b.amountKobo), currency: b.currency });
-		else await ctx.runMutation(internal.money.settlePayment, { txRef: b.txRef, flwTxId: b.flwTxId, amountKobo: BigInt(b.amountKobo), currency: b.currency, method: b.method });
+		else await ctx.runMutation(internal.money.settlePayment, { txRef: b.txRef, flwTxId: b.flwTxId, amountKobo: BigInt(b.amountKobo), currency: b.currency, method: b.method,...(b.gateway?{gateway:b.gateway}:{}) });
 		return new Response('ok');
 	})
 });
