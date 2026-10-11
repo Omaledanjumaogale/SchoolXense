@@ -5,9 +5,43 @@ import { api,internal } from '../../convex/_generated/api';
 import { activeHold } from '../../convex/lib/tutorBundle';
 import { verifyRoomToken } from '../../workers/realtime-rooms/src/token';
 import { verifyEwinLink,type EwinLinkAssertion } from '../../convex/lib/ewinLink';
+import { sameAccountName } from '../../convex/payoutAccounts';
 vi.mock('../../convex/auth',()=>({authComponent:{safeGetAuthUser:async(ctx:any)=>{const i=await ctx.auth.getUserIdentity();return i?{_id:i.subject,emailVerified:true}:null;}}}));
 vi.mock('../../convex/components',()=>({workflows:{start:vi.fn()},attemptAggregate:{insert:vi.fn()}}));
 const modules=import.meta.glob('../../convex/**/*.ts');
+test('bank name matching tolerates ordering but rejects missing or unrelated names',()=>{
+ expect(sameAccountName('Ada Chika Okafor','OKAFOR ADA CHIKA')).toBe(true);
+ expect(sameAccountName('Ada Chika Okafor','Ada Okafor')).toBe(false);
+ expect(sameAccountName('Ada Chika Okafor','Unknown Recipient')).toBe(false);
+});
+test('payout dispatch is claimed once and terminal settlement rejects mismatched amount',async()=>{
+ vi.stubEnv('PAYOUTS_ENABLED','true');
+ try {
+  const f=await fixture();
+  const id=await f.t.run(async ctx=>{
+   await ctx.db.insert('roles',{userId:f.other,role:'staff',grantedAt:Date.now()});
+   await ctx.db.insert('payoutAccounts',{userId:f.learner,bankCode:'044',bankName:'Test bank',accountLast4:'1234',accountName:'learner',nameMatched:true,flwRecipientRef:'123'});
+   return ctx.db.insert('payouts',{userId:f.learner,amount:200000n,status:'queued',reference:'test-payout',approvals:[f.tutor,f.other],recipientRef:'123'});
+  });
+  expect(await f.t.mutation(internal.money.claimPayout,{id})).not.toBeNull();
+  expect(await f.t.mutation(internal.money.claimPayout,{id})).toBeNull();
+  await expect(f.t.mutation(internal.money.closePayout,{reference:'test-payout',success:true,flwTransferId:'456',amountKobo:1n,currency:'NGN'})).rejects.toThrow('TRANSFER_RECONCILIATION_MISMATCH');
+  expect((await f.t.run(ctx=>ctx.db.get(id)))?.status).toBe('processing');
+  await f.t.mutation(internal.money.closePayout,{reference:'test-payout',success:true,flwTransferId:'456',amountKobo:200000n,currency:'NGN'});
+  expect((await f.t.run(ctx=>ctx.db.get(id)))?.status).toBe('paid');
+  const stale=await f.t.run(async ctx=>{
+   await ctx.db.patch(f.other,{status:'suspended'});
+   return ctx.db.insert('payouts',{userId:f.learner,amount:200000n,status:'queued',reference:'stale-approval',approvals:[f.tutor,f.other],recipientRef:'123'});
+  });
+  await expect(f.t.mutation(internal.money.claimPayout,{id:stale})).rejects.toThrow('PAYOUT_APPROVAL_REVIEW_REQUIRED');
+ } finally { vi.unstubAllEnvs(); }
+});
+test('bank changes are blocked while an approved payout is pending',async()=>{
+ const f=await fixture();
+ await f.t.run(ctx=>ctx.db.insert('payouts',{userId:f.learner,amount:200000n,status:'awaiting_approval',reference:'pending-bank',approvals:[]}));
+ await expect(f.a.mutation(internal.payoutAccounts.save,{bankCode:'044',bankName:'Test',accountLast4:'1234',accountName:'learner',recipient:'123'})).rejects.toThrow('pending payouts');
+ expect(await f.t.run(ctx=>ctx.db.query('payoutAccounts').collect())).toHaveLength(0);
+});
 async function fixture(){const t=convexTest(schema,modules);const rows=await t.run(async ctx=>{
  const add=async(authId:string)=>ctx.db.insert('users',{authId,name:authId,isMinor:false,profileComplete:true,dailyMinutes:15,referralCode:authId,creditsDays:0,streak:0,status:'active'});
  const learner=await add('learner'),tutor=await add('tutor'),other=await add('other');

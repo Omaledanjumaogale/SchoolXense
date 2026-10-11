@@ -32,6 +32,7 @@ import type * as lib_tutorBundle from "../lib/tutorBundle.js";
 import type * as market from "../market.js";
 import type * as media from "../media.js";
 import type * as money from "../money.js";
+import type * as payoutAccounts from "../payoutAccounts.js";
 import type * as portal from "../portal.js";
 import type * as practice from "../practice.js";
 import type * as rateLimits from "../rateLimits.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   market: typeof market;
   media: typeof media;
   money: typeof money;
+  payoutAccounts: typeof payoutAccounts;
   portal: typeof portal;
   practice: typeof practice;
   rateLimits: typeof rateLimits;

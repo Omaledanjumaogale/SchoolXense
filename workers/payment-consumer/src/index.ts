@@ -16,8 +16,9 @@ export default {
 				if (env.PAYMENTS_ENABLED !== 'true' || !env.FLW_SECRET_KEY || !env.INTERNAL_WEBHOOK_TOKEN) throw new Error('Payment processing is disabled');
 				if (!/^\d+$/.test(id)) throw new Error('Invalid provider transaction id');
 				if (type === 'transfer.completed') {
-					const t = await flw<{ status: string; reference: string; id: number }>(env, `/transfers/${id}`);
-					await settle(env, { kind: 'transfer', txRef: t.reference, flwTxId: String(t.id), success: t.status === 'SUCCESSFUL', amountKobo: '0', currency: 'NGN' });
+					const t = await flw<{ status: string; reference: string; id: number; amount: number; currency: string }>(env, `/transfers/${id}`);
+					if (!['SUCCESSFUL','FAILED'].includes(t.status)) throw new Error('Transfer is not terminal');
+					await settle(env, { kind: 'transfer', txRef: t.reference, flwTxId: String(t.id), success: t.status === 'SUCCESSFUL', amountKobo: String(Math.round(t.amount * 100)), currency: t.currency });
 				} else {
 					const tx = await flw<{ id: number; tx_ref: string; status: string; amount: number; currency: string; payment_type: string }>(env, `/transactions/${encodeURIComponent(id)}/verify`);
 					if (tx.status !== 'successful') { m.ack(); continue; }

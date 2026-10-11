@@ -3,9 +3,10 @@
  * Flutterwave moves the money; Convex decides who owns it.
  */
 import { v, ConvexError } from 'convex/values';
-import { internalMutation, internalAction, internalQuery } from './_generated/server';
-import { internal } from './_generated/api';
-import { withAccess, audit } from './lib/access';
+import { action, internalMutation, internalAction, internalQuery } from './_generated/server';
+import { api, internal } from './_generated/api';
+import { withAccess, audit, resolve, hasRole } from './lib/access';
+import { sameAccountName } from './payoutAccounts';
 import { post, systemWallet, userWallet, balance } from './lib/ledger';
 import { split, splitByRules, type TxnKind } from '../src/lib/engines/hiveShare';
 import type { Id } from './_generated/dataModel';
@@ -156,14 +157,14 @@ export const requestPayout = withAccess({ adultOnly: true }).mutation({
 	handler: async (ctx, { amountKobo }) => {
 		if (amountKobo < 200_000n) throw new ConvexError('MIN_2000');
 		const acct = await ctx.db.query('payoutAccounts').withIndex('by_user', (q) => q.eq('userId', ctx.user._id)).unique();
-		if (!acct?.nameMatched) throw new ConvexError('NO_MATCHED_ACCOUNT');
+		if (!acct?.nameMatched || !sameAccountName(ctx.user.name, acct.accountName)) throw new ConvexError('NO_MATCHED_ACCOUNT');
 		const w = await userWallet(ctx, ctx.user._id);
 		if ((await balance(ctx, w)) < amountKobo) throw new ConvexError('INSUFFICIENT_FUNDS');
 		if(process.env.PAYOUTS_ENABLED!=='true')throw new ConvexError('PAYOUTS_UNAVAILABLE');
 		if(!acct.flwRecipientRef)throw new ConvexError('NO_VERIFIED_RECIPIENT');
 		const reference = `SX-PO-${crypto.randomUUID()}`;
 		await post(ctx, `payout:${reference}`, [{ walletId: w, amount: -amountKobo, kind: 'payout', memo: reference }, { walletId: await systemWallet(ctx, 'payouts_out'), amount: amountKobo, kind: 'payout', memo: reference }]);
-		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status:'awaiting_approval', reference, approvals: [] });
+		await ctx.db.insert('payouts', { userId: ctx.user._id, amount: amountKobo, status:'awaiting_approval', reference, approvals: [], recipientRef: acct.flwRecipientRef });
 		await audit(ctx, ctx.user._id, 'payouts.request', reference);
 	}
 });
@@ -178,23 +179,68 @@ export const runPayouts = internalAction({
 		if (process.env.PAYOUTS_ENABLED !== 'true' || !process.env.FLW_SECRET_KEY) return;
 		const queued = await ctx.runQuery(internal.money.queuedPayouts, {});
 		if (!queued.length) return;
-		if(queued.some(p=>!p.recipient||!/^\d+$/.test(p.recipient)))throw new ConvexError('PAYOUT_RECIPIENT_RECONCILIATION_REQUIRED');
-		const res = await fetch('https://api.flutterwave.com/v3/bulk-transfers', {
-			method: 'POST',
-			headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, 'Content-Type': 'application/json' },
-			body: JSON.stringify({ title: `SchoolXense payouts ${new Date().toISOString().slice(0, 10)}`, bulk_data: queued.map((p) => ({ beneficiary: Number(p.recipient),amount: Number(p.amount) / 100, currency: 'NGN', reference: p.reference, narration: 'SchoolXense earnings' })) })
-		});
-		await ctx.runMutation(internal.money.markProcessing, { ids: queued.map((p) => p._id), ok: res.ok });
+		for (const payout of queued) {
+			const claimed = await ctx.runMutation(internal.money.claimPayout, { id: payout._id });
+			if (!claimed) continue;
+			try {
+				const response = await fetch('https://api.flutterwave.com/v3/transfers', { method: 'POST', headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ beneficiary: Number(claimed.recipientRef), amount: Number(claimed.amount) / 100, currency: 'NGN', debit_currency: 'NGN', reference: claimed.reference, narration: 'SchoolXense earnings' }), signal: AbortSignal.timeout(20000) });
+				const result = await response.json();
+				if (!response.ok || result.status !== 'success' || !result.data?.id) throw new Error('Provider acceptance was not confirmed.');
+				await ctx.runMutation(internal.money.recordPayoutDispatch, { id: payout._id, transferId: String(result.data.id) });
+			} catch {
+				// A timeout can follow a successful transfer. Never requeue automatically.
+				await ctx.runMutation(internal.money.recordPayoutDispatch, { id: payout._id, error: 'Provider outcome requires reconciliation; do not resubmit.' });
+			}
+		}
 	}
 });
-export const markProcessing = internalMutation({ args: { ids: v.array(v.id('payouts')), ok: v.boolean() }, handler: async (ctx, { ids, ok }) => { for (const id of ids) await ctx.db.patch(id, { status: ok ? 'processing' : 'queued' }); } });
+export const claimPayout = internalMutation({ args: { id: v.id('payouts') }, handler: async (ctx, { id }) => {
+	if (process.env.PAYOUTS_ENABLED !== 'true') return null;
+	const payout = await ctx.db.get(id);
+	if (!payout || payout.status !== 'queued' || new Set(payout.approvals).size < 2) return null;
+	const owner = await ctx.db.get(payout.userId);
+	if (!owner || owner.status !== 'active' || owner.isMinor) throw new ConvexError('PAYOUT_ACCOUNT_RESTRICTED');
+	for (const approverId of payout.approvals) {
+		const approver = await ctx.db.get(approverId);
+		if (approverId === payout.userId || approver?.status !== 'active' || !await hasRole(ctx, approverId, 'staff')) throw new ConvexError('PAYOUT_APPROVAL_REVIEW_REQUIRED');
+	}
+	const account = await ctx.db.query('payoutAccounts').withIndex('by_user', q => q.eq('userId', payout.userId)).unique();
+	if (!account?.nameMatched || !sameAccountName(owner.name, account.accountName) || !account.flwRecipientRef || !/^\d+$/.test(account.flwRecipientRef) || (payout.recipientRef && payout.recipientRef !== account.flwRecipientRef)) throw new ConvexError('PAYOUT_RECIPIENT_RECONCILIATION_REQUIRED');
+	await ctx.db.patch(id, { status: 'processing', recipientRef: account.flwRecipientRef });
+	return { ...payout, recipientRef: account.flwRecipientRef };
+} });
+export const recordPayoutDispatch = internalMutation({ args: { id: v.id('payouts'), transferId: v.optional(v.string()), error: v.optional(v.string()) }, handler: async (ctx, args) => {
+	const payout = await ctx.db.get(args.id);
+	if (!payout || payout.status !== 'processing') return;
+	await ctx.db.patch(args.id, { ...(args.transferId ? { flwTransferId: args.transferId } : {}), dispatchError: args.error });
+} });
+export const payoutForReconciliation = withAccess({ role: 'staff' }).query({ args: { id: v.id('payouts') }, handler: async (ctx, { id }) => {
+	const payout = await ctx.db.get(id);
+	if (!payout || payout.status !== 'processing') throw new ConvexError('An in-progress payout is required.');
+	return { reference: payout.reference, amount: payout.amount, transferId: payout.flwTransferId };
+} });
+export const reconcilePayout = action({ args: { id: v.id('payouts'), providerTransferId: v.string() }, handler: async (ctx, args): Promise<void> => {
+	const payout = await ctx.runQuery(api.money.payoutForReconciliation, { id: args.id });
+	if (!/^\d+$/.test(args.providerTransferId) || !process.env.FLW_SECRET_KEY) throw new ConvexError('A valid provider transfer ID is required.');
+	const response = await fetch(`https://api.flutterwave.com/v3/transfers/${args.providerTransferId}`, { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }, signal: AbortSignal.timeout(15000) });
+	const result = await response.json();
+	const transfer = result.data;
+	if (!response.ok || result.status !== 'success' || String(transfer?.id) !== args.providerTransferId || transfer.reference !== payout.reference || !['SUCCESSFUL','FAILED'].includes(transfer.status)) throw new ConvexError('The provider has not confirmed a matching terminal transfer.');
+	await ctx.runMutation(internal.money.closePayout, { reference: payout.reference, flwTransferId: args.providerTransferId, success: transfer.status === 'SUCCESSFUL', amountKobo: BigInt(Math.round(transfer.amount * 100)), currency: transfer.currency });
+	await ctx.runMutation(internal.money.auditReconciliation, { id: args.id });
+} });
+export const auditReconciliation = internalMutation({ args: { id: v.id('payouts') }, handler: async (ctx, { id }) => {
+	const { user } = await resolve(ctx, { role: 'staff' });
+	await audit(ctx, user._id, 'payouts.reconcile', id, 'Terminal provider amount, currency and reference verified.');
+} });
 
 /** transfer.completed webhook → paid, or return funds to the wallet on failure. */
 export const closePayout = internalMutation({
-	args: { reference: v.string(), success: v.boolean(), flwTransferId: v.string() },
+	args: { reference: v.string(), success: v.boolean(), flwTransferId: v.string(), amountKobo: v.int64(), currency: v.string() },
 	handler: async (ctx, a) => {
 		const p = await ctx.db.query('payouts').withIndex('by_reference', (q) => q.eq('reference', a.reference)).unique();
 		if (!p || p.status === 'paid' || p.status === 'failed') return;
+		if (p.status !== 'processing' || p.amount !== a.amountKobo || a.currency !== 'NGN' || (p.flwTransferId && p.flwTransferId !== a.flwTransferId)) throw new ConvexError('TRANSFER_RECONCILIATION_MISMATCH');
 		if (a.success) return ctx.db.patch(p._id, { status: 'paid', flwTransferId: a.flwTransferId });
 		await post(ctx, `payout-fail:${a.reference}`, [{ walletId: await systemWallet(ctx, 'payouts_out'), amount: -p.amount, kind: 'payout', memo: 'returned' }, { walletId: await userWallet(ctx, p.userId), amount: p.amount, kind: 'payout', memo: `Returned ${a.reference}` }]);
 		await ctx.db.patch(p._id, { status: 'failed' });

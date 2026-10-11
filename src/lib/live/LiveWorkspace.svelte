@@ -15,6 +15,7 @@
  import ResidenceFields from './ResidenceFields.svelte';
  import EwinConnection from './EwinConnection.svelte';
  import InstitutionActions from './InstitutionActions.svelte';
+ import BankAccount from './BankAccount.svelte';
  let residenceState=$state(''),lga=$state(''),whatsapp=$state(''),nin=$state('');
  let loadedProfile=$state(false);
  let supportSubject=$state(''),supportBody=$state('');
@@ -78,6 +79,7 @@
 		<div class="panel p-6 mb-5 flex flex-wrap gap-4 items-center justify-between"><div><h2 class="text-xl font-semibold">Ready for your next session?</h2><p class="muted mt-2">Build mastery with reviewed questions and save your progress.</p></div><a href="/practice" class="ctl ctl-primary">Start practice<Icon name="play" size={16} /></a></div>
 	{/if}
 	{#if ['wallet', 'earn', 'payouts'].includes(domain)}
+		{#if domain === 'payouts' && profile.data && !profile.data.isMinor}<BankAccount />{/if}
 		<div class="panel p-6 mb-5"><p class="eyebrow">Available balance</p><p class="num text-4xl font-semibold mt-3">{naira(Number(data.balance ?? 0))}</p><p class="muted text-sm mt-3">Settled earnings only. Payouts require a verified, name-matched bank account.</p></div>
 		{#if domain === 'payouts'}<form class="panel p-5 grid gap-3 mb-5" onsubmit={event => { event.preventDefault(); run(() => client.mutation(api.money.requestPayout, { amountKobo: BigInt(Math.round(price * 100)) })); }}><label class="label" for="payout-amount">Amount in naira</label><input id="payout-amount" class="field" type="number" min="2000" step="1" bind:value={price} required /><button class="ctl ctl-primary" disabled={busy}>Request payout</button></form>{/if}
 	{/if}

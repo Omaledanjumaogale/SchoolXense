@@ -12,6 +12,6 @@ Public application defaults, Wrangler production/default environments, the payme
 
 Payments, payouts and E-WIN synchronization are paused during cutover validation. R2 remains in the existing Cloudflare account; its objects do not require Convex re-import.
 
-Preview production URL guards reject both the previous and new production deployments. Default preview Pages and payment consumer targets fail closed. The old project preview secret was removed. Create a preview key in the new project using the instructions in [PREVIEW-KEY-SETUP.md](./PREVIEW-KEY-SETUP.md); a production deploy key cannot create it.
+Preview production URL guards reject both the previous and new production deployments. Default preview Pages and payment consumer targets fail closed. The new project preview key is configured under `PREVIEW_DEPLOY_KEY`, and the manual `pr-0` preview deployment passed its workflow and rendered discovery checks. See [PREVIEW-KEY-SETUP.md](./PREVIEW-KEY-SETUP.md).
 
 Validation evidence is recorded separately in ignored `.artifacts` files. Successful code deployment and snapshot import do not alone establish OAuth provider acceptance, recovery email delivery or payment acceptance. Those journeys require their own checks.
