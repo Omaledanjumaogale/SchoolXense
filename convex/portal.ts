@@ -1,5 +1,6 @@
 import { query, mutation, internalMutation } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
+import { paginationOptsValidator } from 'convex/server';
 import { authComponent } from './auth';
 import { resolve, hasRole, audit, isTenantMember } from './lib/access';
 import { rateLimiter } from './rateLimits';
@@ -49,13 +50,35 @@ export const activateOwner = mutation({ args: {}, handler: async ctx => {
 export const catalogue = query({ args: { kind: v.union(v.literal('offers'), v.literal('packs'), v.literal('cohorts'), v.literal('testimonials')) }, handler: async (ctx, { kind }) => {
 	if (kind === 'testimonials') return ctx.db.query('testimonials').withIndex('by_approved', q => q.eq('approved', true)).take(12);
 	if (kind === 'offers') return ctx.db.query('offers').withIndex('by_active_kind', q => q.eq('active', true)).take(50);
-	if (kind === 'packs') return (await ctx.db.query('packs').withIndex('by_status', q => q.eq('status', 'live')).take(50)).map(({ fileId, ...pack }) => pack);
+	if (kind === 'packs') return (await ctx.db.query('packs').withIndex('by_status', q => q.eq('status', 'live')).take(50)).map(({ fileId, mediaKey, ...pack }) => pack);
 	return ctx.db.query('cohorts').withIndex('by_start', q => q.gte('startsAt', Date.now())).take(50);
 }});
 
 export const offers = query({ args: {}, handler: ctx=>ctx.db.query('offers').withIndex('by_active_kind',q=>q.eq('active',true)).take(50) });
 export const testimonials = query({ args: {}, handler: ctx=>ctx.db.query('testimonials').withIndex('by_approved',q=>q.eq('approved',true)).take(12) });
 export const publicPack=query({args:{slug:v.string()},handler:async(ctx,a)=>{const p=await ctx.db.query('packs').withIndex('by_slug',q=>q.eq('slug',a.slug)).unique();if(!p||p.status!=='live')return null;const author=await ctx.db.get(p.authorId);const {fileId,mediaKey,...pack}=p;return {...pack,authorName:author?.name??'SchoolXense creator'};}});
+export const publicTutor=query({args:{slug:v.string()},handler:async(ctx,{slug})=>{
+ const user=await ctx.db.query('users').withIndex('by_slug',q=>q.eq('slug',slug)).unique();
+ if(!user||user.status!=='active'||!await hasRole(ctx,user._id,'tutor'))return null;
+ const offers=await ctx.db.query('offers').withIndex('by_tutor',q=>q.eq('tutorId',user._id)).filter(q=>q.eq(q.field('active'),true)).take(50);
+ if(!offers.length)return null;
+ return {name:user.name,slug:user.slug,headline:user.headline,bio:user.bio,languages:user.languages,offers};
+}});
+export const publicCohort=query({args:{id:v.string()},handler:async(ctx,{id})=>{
+ const key=ctx.db.normalizeId('cohorts',id);if(!key)return null;
+ const cohort=await ctx.db.get(key);if(!cohort||cohort.startsAt<Date.now())return null;
+ const host=await ctx.db.get(cohort.hostId);if(!host||host.status!=='active')return null;
+ return {...cohort,hostName:host.name};
+}});
+export const discovery=query({args:{kind:v.union(v.literal('packs'),v.literal('offers'),v.literal('cohorts')),paginationOpts:paginationOptsValidator},handler:async(ctx,{kind,paginationOpts})=>{
+ const result=kind==='packs'?await ctx.db.query('packs').withIndex('by_status',q=>q.eq('status','live')).paginate(paginationOpts):kind==='offers'?await ctx.db.query('offers').withIndex('by_active_kind',q=>q.eq('active',true)).paginate(paginationOpts):await ctx.db.query('cohorts').withIndex('by_start',q=>q.gte('startsAt',Date.now())).paginate(paginationOpts);
+ const page=await Promise.all(result.page.map(async record=>{
+  if('slug' in record)return {path:'/library/'+encodeURIComponent(record.slug)};
+  if('tutorId' in record){const tutor=await ctx.db.get(record.tutorId);return tutor?.slug&&tutor.status==='active'&&await hasRole(ctx,tutor._id,'tutor')?{path:'/tutors/'+encodeURIComponent(tutor.slug)}:null;}
+  if('hostId' in record){const host=await ctx.db.get(record.hostId);return host?.status==='active'?{path:'/cohorts/'+record._id}:null;}
+  return null;
+ }));return {...result,page:page.filter(x=>x!==null)};
+}});
 export const packAccess=query({args:{packId:v.id('packs')},handler:async(ctx,a)=>{const {user}=await resolve(ctx);const p=await ctx.db.get(a.packId);if(!p||p.status!=='live'||!p.mediaKey)throw new ConvexError('PACK_UNAVAILABLE');const owned=p.authorId===user._id||await hasRole(ctx,user._id,'staff')||!!await ctx.db.query('purchases').withIndex('by_user',q=>q.eq('userId',user._id)).filter(q=>q.eq(q.field('packId'),p._id)).first();if(!owned)throw new ConvexError('PURCHASE_REQUIRED');return {key:p.mediaKey,title:p.title};}});
 export const searchCatalogue=query({args:{q:v.string()},handler:async(ctx,a)=>{
  const text=a.q.trim().toLowerCase();if(text.length<2||text.length>80)return [];
