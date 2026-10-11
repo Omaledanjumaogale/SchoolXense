@@ -17,11 +17,14 @@ export default {
 				if (!/^\d+$/.test(id)) throw new Error('Invalid provider transaction id');
 				if (type === 'transfer.completed') {
 					const t = await flw<{ status: string; reference: string; id: number; amount: number; currency: string }>(env, `/transfers/${id}`);
+					if (String(t.id) !== id) throw new Error('Provider transfer identity mismatch');
 					if (!['SUCCESSFUL','FAILED'].includes(t.status)) throw new Error('Transfer is not terminal');
 					await settle(env, { kind: 'transfer', txRef: t.reference, flwTxId: String(t.id), success: t.status === 'SUCCESSFUL', amountKobo: String(Math.round(t.amount * 100)), currency: t.currency });
-				} else {
+				} else if (type === 'charge.completed') {
 					const tx = await flw<{ id: number; tx_ref: string; status: string; amount: number; currency: string; payment_type: string }>(env, `/transactions/${encodeURIComponent(id)}/verify`);
-					if (tx.status !== 'successful') { m.ack(); continue; }
+					if (String(tx.id) !== id) throw new Error('Provider payment identity mismatch');
+					if (tx.status === 'failed' || tx.status === 'cancelled') { m.ack(); continue; }
+					if (tx.status !== 'successful') throw new Error('Payment is not terminal');
 					await settle(env, { kind: 'payment', txRef: tx.tx_ref, flwTxId: String(tx.id), amountKobo: String(Math.round(tx.amount * 100)), currency: tx.currency, method: tx.payment_type });
 				}
 				m.ack();
@@ -34,13 +37,13 @@ export default {
 };
 
 async function flw<T>(env: Env, path: string): Promise<T> {
-	const r = await fetch(`https://api.flutterwave.com/v3${path}`, { headers: { Authorization: `Bearer ${env.FLW_SECRET_KEY}` } });
+	const r = await fetch(`https://api.flutterwave.com/v3${path}`, { headers: { Authorization: `Bearer ${env.FLW_SECRET_KEY}` }, signal: AbortSignal.timeout(15000) });
 	const j = (await r.json()) as { status: string; data: T; message: string };
 	if (!r.ok || j.status !== 'success') throw new Error(j.message ?? `HTTP ${r.status}`);
 	return j.data;
 }
 
 async function settle(env: Env, body: Record<string, unknown>) {
-	const r = await fetch(`${env.CONVEX_SITE_URL}/payments/settle`, { method: 'POST', headers: { authorization: `Bearer ${env.INTERNAL_WEBHOOK_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+	const r = await fetch(`${env.CONVEX_SITE_URL}/payments/settle`, { method: 'POST', headers: { authorization: `Bearer ${env.INTERNAL_WEBHOOK_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
 	if (!r.ok) throw new Error(`Convex settle ${r.status}`);
 }

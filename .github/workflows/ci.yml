@@ -68,9 +68,12 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - run: npm ci
       - run: npx convex deploy --typecheck enable
+      - name: Deploy verified payment queue consumer
+        run: npx wrangler deploy --config workers/payment-consumer/wrangler.toml --env production
       - run: npm run build
       - run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense --branch main
       - run: node scripts/smoke-live.mjs
+      - run: node scripts/check-discovery-live.mjs
   preview-backend:
     if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.preview_only)
     needs: verify

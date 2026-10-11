@@ -22,6 +22,8 @@ Live production and isolated preview checks confirmed FAQ HTML and schema, Frenc
 Device Web Push delivery still requires a VAPID key, durable subscriptions, a delivery worker and permission UX; realtime in-app notifications are implemented separately. Full background-workflow administration, exhaustive per-button QA, all content-page author/date audits and all-sister repository updates remain separate work. The new project preview key is configured and a manual preview has passed deployment and rendered-source checks. Independent preview authentication and separate R2/queue resources are configured. Production mother reporting is enabled after signed readiness and duplicate-safe event replay succeeded on the migrated E-WIN backend. Payments/payouts remain blocked by invalid provider authentication. Preview email/AI/OAuth provider activation remains separate.
 
 ## Quick wins delivered
+The October 11 production release passed CI and live rendered-source checks, including visible FAQ answers and crawlable, publicly cached landing images. Desktop Chromium and Pixel 5 tests verified offline fallback, reconnect recovery, cache exclusion for login/API responses, and the installation event handler. The installation event was simulated; this does not establish installation on a physical Android or iOS device. The offline page disables hydration but is served at runtime because the shared server layout requires runtime environment settings.
+
 1. Server-rendered public catalogue and pack content.
 2. Shared FAQ content and schema.
 3. Parent/child organization discovery links.
