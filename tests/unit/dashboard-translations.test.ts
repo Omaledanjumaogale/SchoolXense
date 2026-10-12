@@ -1,0 +1,3 @@
+import {describe,it,expect} from 'vitest';
+import catalogue from '../../src/lib/i18n/dashboard.json';
+describe('dashboard translations',()=>{it('covers every bundled source string in each supported locale',()=>{const keys=Object.keys(catalogue.fr);expect(keys.length).toBeGreaterThan(490);for(const [locale,rows] of Object.entries(catalogue)){expect(Object.keys(rows).sort(),locale).toEqual([...keys].sort());for(const value of Object.values(rows))expect(typeof value==='string'&&value.trim().length>0).toBe(true);}});it('translates operational and learning controls',()=>{for(const rows of Object.values(catalogue)){for(const key of ['Your learning overview','Admin console','Request payout','Configuration health'])expect(rows[key as keyof typeof rows]).toBeTruthy();}});});

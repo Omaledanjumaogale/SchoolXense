@@ -1,5 +1,5 @@
 // Cache public assets only. Account pages and API responses must stay on the network.
-const VERSION = 'schoolxense-public-v5';
+const VERSION = 'schoolxense-public-v6';
 const OFFLINE_URL = '/offline';
 const SHELL = [OFFLINE_URL, '/favicon.svg', '/manifest.webmanifest'];
 self.addEventListener('push',event=>{

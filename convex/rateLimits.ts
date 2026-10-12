@@ -3,6 +3,7 @@ import { components } from './_generated/api';
 
 /** CollegeCBT limits carried over: AI generation 5/min free, 60/min Pro. Free plan: 20 questions/day. */
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
+	pushTest: { kind: 'token bucket', rate: 3, period: HOUR, capacity: 3 },
 	checkout: { kind: 'token bucket', rate: 10, period: HOUR, capacity: 10 },
 	bankOnboarding: { kind: 'token bucket', rate: 5, period: HOUR, capacity: 5 },
 	enquiries: { kind: 'token bucket', rate: 5, period: HOUR, capacity: 5 },

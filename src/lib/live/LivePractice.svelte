@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {dashboardText} from "$lib/i18n/dashboard.svelte";
 	import { untrack } from 'svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
@@ -18,21 +19,21 @@
 	async function finish() { await run(async () => { if (attemptId) result = await client.mutation(api.practice.finish, { attemptId }); }); }
 </script>
 <section class="panel p-5 sm:p-7">
-	<div class="flex gap-3 items-center"><Icon name="target" size={22} /><h2 class="text-xl font-semibold">Adaptive practice</h2></div>
-	{#if error}<p role="alert" class="mt-4" style="color:var(--bad)">{error}</p>{#if error.includes('SUBSCRIPTION_REQUIRED')}<a class="ctl ctl-sm mt-3" href="/pricing">Choose a plan</a>{/if}{/if}
+	<div class="flex gap-3 items-center"><Icon name="target" size={22} /><h2 class="text-xl font-semibold">{dashboardText("Adaptive practice")}</h2></div>
+	{#if error}<p role="alert" class="mt-4" style="color:var(--bad)">{error}</p>{#if error.includes('SUBSCRIPTION_REQUIRED')}<a class="ctl ctl-sm mt-3" href="/pricing">{dashboardText("Choose a plan")}</a>{/if}{/if}
 	{#if !attemptId || result?.grade}
-		{#if result?.grade}<div class="panel-sunk p-4 mt-4" role="status"><p class="num text-3xl font-semibold">{result.pct}% · {result.grade}</p><p class="muted text-sm">Your result and progress have been saved.</p></div>{/if}
+		{#if result?.grade}<div class="panel-sunk p-4 mt-4" role="status"><p class="num text-3xl font-semibold">{result.pct}% · {result.grade}</p><p class="muted text-sm">{dashboardText("Your result and progress have been saved.")}</p></div>{/if}
 		<form class="grid sm:grid-cols-3 gap-3 mt-5" onsubmit={start}>
-			<div><label class="label" for="practice-exam">Exam</label><select id="practice-exam" class="field" bind:value={exam}><option value="jamb">JAMB</option><option value="waec">WAEC</option><option value="neco">NECO</option><option value="campus">Campus</option><option value="ican">ICAN</option></select></div>
-			<div><label class="label" for="practice-subject">Subject</label><select id="practice-subject" class="field" bind:value={subject}>{#each ['physics', 'chemistry', 'mathematics', 'english', 'biology', 'mth101', 'gst101'] as item}<option value={item}>{item.toUpperCase()}</option>{/each}</select></div>
-			<div><label class="label" for="practice-mode">Session</label><select id="practice-mode" class="field" bind:value={mode}><option value="drill">Daily drill</option><option value="mock">Timed mock</option></select></div>
-			<button class="ctl ctl-primary sm:col-span-3" disabled={busy}>Start practice<Icon name="play" size={16} /></button>
+			<div><label class="label" for="practice-exam">{dashboardText("Exam")}</label><select id="practice-exam" class="field" bind:value={exam}><option value="jamb">{dashboardText("JAMB")}</option><option value="waec">{dashboardText("WAEC")}</option><option value="neco">{dashboardText("NECO")}</option><option value="campus">{dashboardText("Campus")}</option><option value="ican">{dashboardText("ICAN")}</option></select></div>
+			<div><label class="label" for="practice-subject">{dashboardText("Subject")}</label><select id="practice-subject" class="field" bind:value={subject}>{#each ['physics', 'chemistry', 'mathematics', 'english', 'biology', 'mth101', 'gst101'] as item}<option value={item}>{item.toUpperCase()}</option>{/each}</select></div>
+			<div><label class="label" for="practice-mode">{dashboardText("Session")}</label><select id="practice-mode" class="field" bind:value={mode}><option value="drill">{dashboardText("Daily drill")}</option><option value="mock">{dashboardText("Timed mock")}</option></select></div>
+			<button class="ctl ctl-primary sm:col-span-3" disabled={busy}>{dashboardText("Start practice")}<Icon name="play" size={16} /></button>
 		</form>
 	{:else}
-		{#if result?.explanation}<div class="panel-sunk p-4 mt-4" role="status"><p class="font-semibold">{result.correct ? 'Correct' : 'Keep learning'}</p><p class="mt-2 text-sm">{result.explanation}</p><button class="ctl ctl-sm mt-3" onclick={() => result = null}>Next question</button></div>
+		{#if result?.explanation}<div class="panel-sunk p-4 mt-4" role="status"><p class="font-semibold">{result.correct ? 'Correct' : 'Keep learning'}</p><p class="mt-2 text-sm">{result.explanation}</p><button class="ctl ctl-sm mt-3" onclick={() => result = null}>{dashboardText("Next question")}</button></div>
 		{:else if question.data}<p class="eyebrow mt-5">{question.data.topic}</p><h3 class="text-xl font-semibold mt-3">{question.data.stem}</h3><div class="grid gap-2 mt-5">{#each question.data.options as option, i}<button class="ctl !h-auto !py-4 justify-start whitespace-normal text-left" disabled={busy} onclick={() => answer(i)}><span class="badge num">{String.fromCharCode(65 + i)}</span>{option}</button>{/each}</div>
-		{:else if question.isLoading}<p class="muted mt-5">Loading your next question…</p>{:else}<p class="muted mt-5">No more reviewed questions in this session. Finish to save your result.</p>{/if}
-		<button class="ctl mt-5" disabled={busy} onclick={finish}>Finish and save result</button>
+		{:else if question.isLoading}<p class="muted mt-5">{dashboardText("Loading your next question…")}</p>{:else}<p class="muted mt-5">{dashboardText("No more reviewed questions in this session. Finish to save your result.")}</p>{/if}
+		<button class="ctl mt-5" disabled={busy} onclick={finish}>{dashboardText("Finish and save result")}</button>
 	{/if}
 </section>
-<section class="panel p-5 mt-4"><h2 class="font-semibold">Recent practice</h2><ul class="grid gap-2 mt-4">{#each attempts.data?.attempts ?? [] as attempt}<li class="panel-sunk p-3 flex justify-between gap-3"><span>{attempt.exam.toUpperCase()} · {attempt.subject}</span><span class="num">{attempt.pct !== undefined ? `${attempt.pct}%` : 'In progress'}</span></li>{:else}<li class="muted">Your first session will appear here.</li>{/each}</ul></section>
+<section class="panel p-5 mt-4"><h2 class="font-semibold">{dashboardText("Recent practice")}</h2><ul class="grid gap-2 mt-4">{#each attempts.data?.attempts ?? [] as attempt}<li class="panel-sunk p-3 flex justify-between gap-3"><span>{attempt.exam.toUpperCase()} · {attempt.subject}</span><span class="num">{attempt.pct !== undefined ? `${attempt.pct}%` : 'In progress'}</span></li>{:else}<li class="muted">{dashboardText("Your first session will appear here.")}</li>{/each}</ul></section>

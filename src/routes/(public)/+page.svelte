@@ -34,7 +34,7 @@
 	];
 </script>
 
-<svelte:head><title>SchoolXense — Learn out loud, earn from what you've mastered</title></svelte:head>
+<svelte:head><title>SchoolXense — Exam practice, tutoring and learning resources</title></svelte:head>
 
 <!-- HERO -->
 <section class="relative overflow-hidden">

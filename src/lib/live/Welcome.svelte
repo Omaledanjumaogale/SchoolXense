@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {dashboardText} from "$lib/i18n/dashboard.svelte";
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
@@ -23,14 +24,14 @@
 		finally { busy = false; }
 	}
 </script>
-<svelte:head><title>Complete account setup · SchoolXense</title><meta name="robots" content="noindex" /></svelte:head>
+<svelte:head><title>{dashboardText("Complete account setup · SchoolXense")}</title><meta name="robots" content="noindex" /></svelte:head>
 <form class="panel p-6 max-w-lg w-full grid gap-4" onsubmit={complete}>
-	<h1 class="text-2xl font-semibold">Your learning starts here</h1>
-	<p class="muted">Choose your age group so SchoolXense can apply the right guardian and earning protections.</p>
-	<label class="flex gap-3"><input type="checkbox" bind:checked={adult} /><span>I am 18 or older.</span></label>
-	<p class="text-xs muted">Under-18 accounts cannot take paid work and need guardian consent for paid bookings.</p>
+	<h1 class="text-2xl font-semibold">{dashboardText("Your learning starts here")}</h1>
+	<p class="muted">{dashboardText("Choose your age group so SchoolXense can apply the right guardian and earning protections.")}</p>
+	<label class="flex gap-3"><input type="checkbox" bind:checked={adult} /><span>{dashboardText("I am 18 or older.")}</span></label>
+	<p class="text-xs muted">{dashboardText("Under-18 accounts cannot take paid work and need guardian consent for paid bookings.")}</p>
 	<ResidenceFields bind:state={residenceState} bind:lga bind:whatsapp bind:nin prefix="welcome"/>
 	{#if error}<p role="alert" style="color:var(--bad)">{error}</p>{/if}
-	{#if error&&profile.data?.ninLast4}<a class="ctl" href={safeNext()}>Continue with existing attribution</a>{/if}
+	{#if error&&profile.data?.ninLast4}<a class="ctl" href={safeNext()}>{dashboardText("Continue with existing attribution")}</a>{/if}
 	<button class="ctl ctl-primary" disabled={busy || !auth.isAuthenticated}>{busy ? 'Saving…' : 'Continue'}</button>
 </form>

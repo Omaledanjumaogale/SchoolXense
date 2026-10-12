@@ -42,3 +42,15 @@ Email acceptance IDs are recorded without storing reset/verification links or ra
 - The user confirmed the PWA is already installed. A physical-device offline reopening result and physical push display remain unverified.
 
 See the automated gateway/access tests for tampered signature, gateway mismatch, amount mismatch, duplicate settlement, preview isolation, encrypted bank storage, push ownership and email outcome checks. CI additionally checks frontend/backend types, production build, browser/mobile PWA behavior and dependency vulnerabilities.
+
+## October 12 follow-up
+
+Branding now uses the same descriptive SchoolXense main title as the discovery metadata. The manifest retains its installed application ID and name, adds an E-WIN education description and dashboard/practice/wallet shortcuts. Trusted staff receive a reversible header switch between `/home` and `/ops`; backend admin authorization remains required.
+
+Bundled dashboard translations cover learning, wallet, tutoring, collaboration, institution and admin UI prose in the seven additional supported languages. Translation generation used public UI strings only. Account/user content and provider diagnostics remain verbatim; native-speaker acceptance remains pending. The locale preference is shared across the dashboard and forms, including Arabic RTL.
+
+A signed-in user with an active device subscription can request a rate-limited generic test reminder from Notifications. Queueing is distinct from provider acceptance and physical device display. Preview rejects test delivery.
+
+Fresh financial readiness inspection found no verified payout bank account and zero owner wallet balance. Although the owner authorized a discretionary small test, no funding instrument or eligible recipient was available, so no payment/payout/refund was executed and no artificial funds were created. Independent staff approvals remain required.
+
+Google and GitHub authorization initialization again returned 200 with the production callback URLs. Full interactive consent/callback remains pending. Provider-dashboard inspection was attempted, but browser control timed out before returning account settings. Dashboard webhook settings and physical offline/push outcomes remain unconfirmed.
