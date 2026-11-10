@@ -30,7 +30,8 @@ test('server routes reject anonymous mutations, cross-origin writes and invalid 
  for(const path of ['/api/payments/initialize','/api/ai/generate','/api/media/sign-upload']){const response=await request.post(path,{headers:{Origin:baseURL!},data:{}});expect(response.status()).toBe(401);}
  const cross=await request.post('/api/ai/generate',{headers:{Origin:'https://untrusted.example'},data:{}});expect(cross.status()).toBe(403);
  const enquiry=await request.post('/api/enquiries',{headers:{Origin:baseURL!},form:{name:'A',email:'bad',message:'short',consent:'on'}});expect(enquiry.status()).toBe(400);
- const session=await request.get('/api/auth/get-session');expect(session.status()).toBe(200);expect(await session.json()).toBeNull();
+ test.setTimeout(120_000);
+ await expect(async()=>{const session=await request.get('/api/auth/get-session');if(session.status()===429)throw Error('Session endpoint temporarily rate limited');expect(session.status()).toBe(200);expect(await session.json()).toBeNull();}).toPass({intervals:[5_000,15_000,45_000],timeout:95_000});
 });
 test('PWA only caches public assets and declares installable icons',async({request})=>{
  const manifest=await(await request.get('/manifest.webmanifest')).json();expect(manifest.name).toBe('SchoolXense');
