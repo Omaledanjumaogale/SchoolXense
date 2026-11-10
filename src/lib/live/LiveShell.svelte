@@ -1,4 +1,5 @@
 <script lang="ts">
+ import StoryRibbon from "./StoryRibbon.svelte";
  import LanguageSelect from '$lib/i18n/LanguageSelect.svelte';
  import {dashboardLocale,dashboardText} from "$lib/i18n/dashboard.svelte";
 	import type { Snippet } from 'svelte';
@@ -50,7 +51,7 @@
 			</div>
 		</header>
 		{#if open}<nav class="lg:hidden p-3 grid grid-cols-2 gap-1 panel" aria-label="Mobile workspace">{#each nav as item}<a class="nav-item" href={item.href} onclick={() => open = false}><Icon name={item.icon} size={16} />{item.label}</a>{/each}</nav>{/if}
-		<main id="main" class="max-w-[1240px] mx-auto p-4 sm:p-6 pb-12">{@render children()}</main>
+		<main id="main" class="max-w-[1240px] mx-auto p-4 sm:p-6 pb-12">{#if ["/home","/studio","/wallet"].includes(page.url.pathname)}<StoryRibbon />{/if}{@render children()}</main>
 	</div>
 </div>
 {:else}

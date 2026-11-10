@@ -1,4 +1,6 @@
 <script lang="ts">
+ import PromoSlider from "$lib/live/PromoSlider.svelte";
+ import StoryRibbon from "$lib/live/StoryRibbon.svelte";
 	import { MODULES } from '$hive/catalogue';
 	import { PLANS } from '$payments/plans';
 	import { naira } from '$ui/format';
@@ -56,6 +58,8 @@
 		<Hero3D />
 	</div>
 </section>
+
+<PromoSlider />
 
 <!-- THREE DOORS -->
 <section class="max-w-[1240px] mx-auto px-4 sm:px-6">
@@ -181,6 +185,7 @@
 	</div>
 </section>
 
+<div class="max-w-[1240px] mx-auto px-4 sm:px-6"><StoryRibbon landing /></div>
 <LandingExtras />
 
 <!-- CTA -->

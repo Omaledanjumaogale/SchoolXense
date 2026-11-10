@@ -27,12 +27,12 @@
 	<p class="muted mt-4 max-w-2xl">{dashboardText("Make room for focused study, useful conversations and people who help you keep going.")}</p>
 	<div class="grid md:grid-cols-3 gap-4 mt-8">
 		{#each [
-			{ key: 'learning-together.webp', title: 'Learn in good company', text: 'Build understanding through practice and discussion.', alt: 'A group collaborating around a laptop', credit: 'Desola Lanre-Ologun', source: 'https://unsplash.com/photos/IgUR1iX0mqM' },
-			{ key: 'collaboration.webp', title: 'Share what you know', text: 'Turn a shared challenge into a useful learning conversation.', alt: 'Colleagues working together at a table', credit: 'Annie Spratt', source: 'https://unsplash.com/photos/QckxruozjRg' },
-			{ key: 'study-community.webp', title: 'Grow your community', text: 'Connect your individual goals with the people around you.', alt: 'People talking and collaborating around a table', credit: 'Brooke Cagle', source: 'https://unsplash.com/photos/g1Kr4Ozfoac' }
-		] as photo}<figure class="panel overflow-hidden"><img src={`/api/images/landing/${photo.key}`} alt={photo.alt} width="1200" height="800" loading="lazy" decoding="async" class="w-full aspect-[3/2] object-cover" /><figcaption class="p-5"><h3 class="font-semibold text-lg">{photo.title}</h3><p class="muted text-sm mt-2">{photo.text}</p><a class="text-[10px] muted inline-block mt-4" href={photo.source} target="_blank" rel="noopener noreferrer">{dashboardText("Photo:")} {photo.credit} {dashboardText("/ Unsplash")}</a></figcaption></figure>{/each}
+			{ key: 'story-1.webp', title: 'Begin with a question', text: 'A learner makes time to study. Reviewed practice helps her decide what to work on next.', alt: 'A learner studying at a desk under an amber lamp' },
+			{ key: 'story-2.webp', title: 'Find someone who can help', text: 'A learner brings a difficult problem to a tutor and works through it step by step.', alt: 'A tutor and learner reviewing a maths diagram in a library' },
+			{ key: 'story-3.webp', title: 'Share the breakthrough', text: 'A learner explains a concept to her peers. Studio and Teams give her a place to keep sharing.', alt: 'A learner explaining a concept to peers at a study table' }
+		] as photo}<figure class="panel overflow-hidden"><img src={`/artwork/${photo.key}`} alt={photo.alt} width="1200" height="800" loading="lazy" decoding="async" class="w-full aspect-[3/2] object-cover" /><figcaption class="p-5"><h3 class="font-semibold text-lg">{photo.title}</h3><p class="muted text-sm mt-2">{photo.text}</p></figcaption></figure>{/each}
 	</div>
-	<p class="text-xs muted mt-3">{dashboardText("Illustrative photography. People pictured are not presented as SchoolXense customers.")}</p>
+	<p class="text-xs muted mt-3">AI-generated illustrations of fictional learners and tutors.</p>
 </section>
 
 <section class="max-w-[1240px] mx-auto px-4 sm:px-6 mt-24" id="testimonials" aria-labelledby="stories-title">
