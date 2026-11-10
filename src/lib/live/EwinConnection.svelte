@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import { onMount } from 'svelte';
  import { useConvexClient } from 'convex-svelte';
  import { api } from '$convex/_generated/api';

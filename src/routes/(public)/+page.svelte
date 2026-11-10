@@ -1,6 +1,6 @@
 <script lang="ts">
- import PromoSlider from "$lib/live/PromoSlider.svelte";
- import StoryRibbon from "$lib/live/StoryRibbon.svelte";
+ import PromoSlider from "#lib/live/PromoSlider.svelte";
+ import StoryRibbon from "#lib/live/StoryRibbon.svelte";
 	import { MODULES } from '$hive/catalogue';
 	import { PLANS } from '$payments/plans';
 	import { naira } from '$ui/format';
@@ -11,7 +11,7 @@
 	import HexMark from '$ui/HexMark.svelte';
 	import Icon from '$ui/Icon.svelte';
 	import Tabs from '$ui/Tabs.svelte';
-	import LandingExtras from '$lib/live/LandingExtras.svelte';
+	import LandingExtras from '#lib/live/LandingExtras.svelte';
 
 	let side = $state('all');
 	const shown = $derived(side === 'all' ? MODULES : MODULES.filter((m) => m.side === side || (side === 'learn' && m.side === 'core')));

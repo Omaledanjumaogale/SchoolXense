@@ -1,7 +1,7 @@
 import { json,error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { CONVEX_SITE_URL } from '$lib/config';
-import { assertSameOrigin } from '$lib/server/convex';
+import * as env from '$app/env/private';
+import { CONVEX_SITE_URL } from '#lib/config';
+import { assertSameOrigin } from '#lib/server/convex';
 import { residence } from '../../../../convex/lib/profileValidation';
 import type { RequestHandler } from './$types';
 export const POST:RequestHandler=async event=>{

@@ -1,13 +1,13 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import { useQuery,useConvexClient } from 'convex-svelte';
  import { api } from '$convex/_generated/api';
  import type { Doc } from '$convex/_generated/dataModel';
- import { states } from '$lib/data/nigeria';
+ import { states } from '#lib/data/nigeria';
  import TutorBundles from './TutorBundles.svelte';
  import WorkflowQueues from './WorkflowQueues.svelte';
  import DeliveryOperations from './DeliveryOperations.svelte';
- import Tooltip from '$lib/components/Tooltip.svelte';
+ import Tooltip from '#lib/components/Tooltip.svelte';
  let {tickets=[],reports=[],payouts=[],events=[]}:{tickets?:Doc<'supportTickets'>[];reports?:Doc<'reports'>[];payouts?:Doc<'payouts'>[];events?:Doc<'ecosystemEvents'>[]}=$props();
  const client=useConvexClient(),health=useQuery(api.admin.health,{});
  let busy=$state(false),error=$state(''),notice=$state(''),notes=$state<Record<string,string>>({});

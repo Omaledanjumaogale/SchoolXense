@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-vi.mock('$lib/config', () => ({ DEMO_MODE: true }));
+vi.mock('#lib/config', () => ({ DEMO_MODE: true }));
 import { hive } from '../../src/lib/hive/store.svelte';
 
 describe('Hive store (demo backend)', () => {

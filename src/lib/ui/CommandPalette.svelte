@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { hive } from '$hive/store.svelte';
-	import { DEMO_MODE } from '$lib/config';
+	import { DEMO_MODE } from '#lib/config';
 	import { useQuery } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { MODULES } from '$hive/catalogue';

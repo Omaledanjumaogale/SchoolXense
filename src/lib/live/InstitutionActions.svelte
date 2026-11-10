@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import {useQuery,useConvexClient} from 'convex-svelte';import {api} from '$convex/_generated/api';import type {Id,Doc} from '$convex/_generated/dataModel';
  let {tenantId,exams=[]}:{tenantId:Id<'tenants'>;exams?:Doc<'hostedExams'>[]}=$props();
  const client=useConvexClient();let busy=$state(false),error=$state(''),notice=$state(''),learner=$state(''),className=$state(''),title=$state(''),exam=$state('jamb'),subject=$state('physics'),date=$state(''),seats=$state(30),minutes=$state(60),selected=$state<string[]>([]);

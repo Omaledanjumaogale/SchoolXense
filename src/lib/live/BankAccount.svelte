@@ -1,7 +1,7 @@
 <script lang="ts">
  import { useQuery, useConvexClient } from 'convex-svelte';
- import LanguageSelect from '$lib/i18n/LanguageSelect.svelte';
- import {accountText} from '$lib/i18n/account';
+ import LanguageSelect from '#lib/i18n/LanguageSelect.svelte';
+ import {accountText} from '#lib/i18n/account';
  import { api } from '$convex/_generated/api';
  let locale=$state('en');const text=$derived(accountText(locale));
  const client = useConvexClient(), account = useQuery(api.payoutAccounts.mine, {});

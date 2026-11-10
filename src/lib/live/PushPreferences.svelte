@@ -1,10 +1,10 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import {onMount} from 'svelte';
  import {useQuery,useConvexClient} from 'convex-svelte';
  import {api} from '$convex/_generated/api';
  import {useAuth} from '@mmailaender/convex-better-auth-svelte/svelte';
- import {transactionLocales} from '$lib/i18n/transactions';
+ import {transactionLocales} from '#lib/i18n/transactions';
  const auth=useAuth(),client=useConvexClient(),configuration=useQuery(api.push.configuration,()=>auth.isAuthenticated?{}:'skip');
  let supported=$state(false),active=$state(false),busy=$state(false),message=$state(''),locale=$state('en');
  onMount(async()=>{supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;if(supported){const registration=await navigator.serviceWorker.ready;active=!!await registration.pushManager.getSubscription();}});

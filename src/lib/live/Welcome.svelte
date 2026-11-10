@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';

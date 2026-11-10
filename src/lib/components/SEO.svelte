@@ -1,5 +1,5 @@
 <script lang="ts">
- import type {PageSEO} from '$lib/seo';
+ import type {PageSEO} from '#lib/seo';
  let {meta}:{meta:PageSEO}=$props();
 </script>
 <svelte:head>

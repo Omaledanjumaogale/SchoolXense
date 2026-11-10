@@ -10,8 +10,8 @@
  * explorable without keys. With PUBLIC_CONVEX_URL set, swap `hive` calls for the
  * Convex functions of the same name (see convex/README.md).
  */
-import { browser } from '$app/environment';
-import { DEMO_MODE } from '$lib/config';
+import { browser } from '$app/env';
+import { DEMO_MODE } from '#lib/config';
 import { pickNextItem, updateAbility, thetaToPct } from '$engines/irt';
 import { newCard, review as sm2Review, qualityFromAnswer, DAY } from '$engines/sm2';
 import { waecGrade, jambBand } from '$engines/grading';

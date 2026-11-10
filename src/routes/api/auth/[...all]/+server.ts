@@ -1,5 +1,5 @@
 import { createSvelteKitHandler } from '@mmailaender/convex-better-auth-svelte/sveltekit';
-import { CONVEX_SITE_URL } from '$lib/config';
+import { CONVEX_SITE_URL } from '#lib/config';
 import type { RequestHandler } from './$types';
 const handlers = createSvelteKitHandler({ convexSiteUrl: CONVEX_SITE_URL });
 function guarded(handler: RequestHandler): RequestHandler {

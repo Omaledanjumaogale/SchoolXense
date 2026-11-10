@@ -1,7 +1,7 @@
 import { GLOSSARY } from '$hive/catalogue';
 import { LANDINGS } from '$hive/landings';
-import {discoveryPaths} from '$lib/server/catalogue';
-import {locales} from '$lib/locales';
+import {discoveryPaths} from '#lib/server/catalogue';
+import {locales} from '#lib/locales';
 export const GET = async () => {
 	const base = 'https://schoolxense.ewinproject.org';
 	const paths = [...new Set(['/', '/explore', '/tutors', '/library', '/cohorts', '/for-schools', '/for-sponsors', '/pricing', '/about', '/integrity', '/safety', '/security', '/privacy', '/terms', '/faq', '/glossary', ...Object.keys(LANDINGS).map((k) => `/${k}`), ...Object.keys(GLOSSARY).map((k) => `/glossary/${k}`)])];

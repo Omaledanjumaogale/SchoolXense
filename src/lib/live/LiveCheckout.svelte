@@ -5,9 +5,9 @@
 	import { naira } from '$ui/format';
 	import Icon from '$ui/Icon.svelte';
 	import {safeCheckoutUrl,type Gateway} from '$payments/gateways';
-	import LanguageSelect from '$lib/i18n/LanguageSelect.svelte';
- import {accountText} from '$lib/i18n/account';
- import {transactionText} from '$lib/i18n/transactions';
+	import LanguageSelect from '#lib/i18n/LanguageSelect.svelte';
+ import {accountText} from '#lib/i18n/account';
+ import {transactionText} from '#lib/i18n/transactions';
 	let { paymentId }: { paymentId: Id<'payments'> } = $props();
 	const checkout = useQuery(api.checkout.get, () => ({ paymentId }));
 	const availability=useQuery(api.gateways.availability,{});

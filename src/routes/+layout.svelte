@@ -1,14 +1,14 @@
 <script lang="ts">
 	import '../app.css';
-	import SEO from '$lib/components/SEO.svelte';
-	import NotificationBridge from '$lib/live/NotificationBridge.svelte';
+	import SEO from '#lib/components/SEO.svelte';
+	import NotificationBridge from '#lib/live/NotificationBridge.svelte';
 	import { onMount } from 'svelte';
 	import { ui } from '$ui/ui.svelte';
 	import Toaster from '$ui/Toaster.svelte';
 	import CommandPalette from '$ui/CommandPalette.svelte';
 	import { createSvelteAuthClient } from '@mmailaender/convex-better-auth-svelte/svelte';
-	import { authClient } from '$lib/auth-client';
-	import { CONVEX_URL } from '$lib/config';
+	import { authClient } from '#lib/auth-client';
+	import { CONVEX_URL } from '#lib/config';
 	import { page } from '$app/state';
 	import InstallApp from '$ui/InstallApp.svelte';
 	createSvelteAuthClient({ authClient, convexUrl: CONVEX_URL });

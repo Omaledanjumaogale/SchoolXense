@@ -1,6 +1,6 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { redirect } from '@sveltejs/kit';
-import {privatePath} from '$lib/seo';
+import {privatePath} from '#lib/seo';
 
 /** Old SchoolCBT / CollegeCBT paths → hub (preserves SEO paths: glossary, curriculum, resources). */
 const LEGACY: [RegExp, string][] = [

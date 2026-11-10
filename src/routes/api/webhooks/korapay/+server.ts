@@ -1,5 +1,5 @@
 import type {RequestHandler} from './$types';
-import {env} from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import {verifyHmacSignature} from '$payments/gateways';
 export const POST:RequestHandler=async({request,platform})=>{
  if((platform?.env?.PAYMENTS_ENABLED??env.PAYMENTS_ENABLED)!=='true')return new Response('payments disabled',{status:503});

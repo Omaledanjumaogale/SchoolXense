@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { DEMO_MODE } from '$lib/config';
-	import LivePack from '$lib/live/LivePack.svelte';
+	import { DEMO_MODE } from '#lib/config';
+	import LivePack from '#lib/live/LivePack.svelte';
 	import { goto } from '$app/navigation';
 	import { hive } from '$hive/store.svelte';
 	import { ui } from '$ui/ui.svelte';

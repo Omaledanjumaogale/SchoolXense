@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
 	import { useQuery } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import Icon from '$ui/Icon.svelte';
@@ -10,7 +10,7 @@
 		{ name: 'A tutor’s perspective', role: 'Example story', quote: 'I want to share what I know, work with motivated learners and see a clear record of my sessions and earnings.', example: true }
 	];
 	const stories = $derived(testimonials.data?.length ? testimonials.data : examples);
-	import {HOME_FAQ as faqs} from '$lib/home-faq';
+	import {HOME_FAQ as faqs} from '#lib/home-faq';
 	let busy = $state(false), notice = $state(''), error = $state('');
 	async function submit(event: SubmitEvent) {
 		event.preventDefault(); busy = true; notice = ''; error = '';

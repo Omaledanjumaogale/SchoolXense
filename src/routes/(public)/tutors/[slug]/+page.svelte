@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {DEMO_MODE} from '$lib/config';
+	import {DEMO_MODE} from '#lib/config';
 	import {naira} from '$ui/format';
 	import { hive } from '$hive/store.svelte';
 	import type { Offer } from '$hive/types';

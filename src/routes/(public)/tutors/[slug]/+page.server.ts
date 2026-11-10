@@ -1,10 +1,10 @@
 import {ConvexHttpClient} from 'convex/browser';
 import {error} from '@sveltejs/kit';
 import {api} from '$convex/_generated/api';
-import {CONVEX_URL,DEMO_MODE} from '$lib/config';
-import {buildMeta,SITE} from '$lib/seo';
-import {buildPageGraph} from '$lib/schema/graph';
-import {buildOrganizationSchema,buildMotherSchema,buildBreadcrumbSchema} from '$lib/schema/builders';
+import {CONVEX_URL,DEMO_MODE} from '#lib/config';
+import {buildMeta,SITE} from '#lib/seo';
+import {buildPageGraph} from '#lib/schema/graph';
+import {buildOrganizationSchema,buildMotherSchema,buildBreadcrumbSchema} from '#lib/schema/builders';
 export const load=async({params}:{params:{slug:string}})=>{
  if(DEMO_MODE)return {tutor:null};
  const tutor=await new ConvexHttpClient(CONVEX_URL).query(api.portal.publicTutor,{slug:params.slug});

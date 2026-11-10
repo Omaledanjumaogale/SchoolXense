@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import type { RequestHandler } from './$types';
-import { assertSameOrigin } from '$lib/server/convex';
-import { CONVEX_SITE_URL } from '$lib/config';
+import { assertSameOrigin } from '#lib/server/convex';
+import { CONVEX_SITE_URL } from '#lib/config';
 export const POST: RequestHandler=async event=>{
  assertSameOrigin(event);
  const length=Number(event.request.headers.get('content-length')??0);

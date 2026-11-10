@@ -1,4 +1,4 @@
-import {SITE,MOTHER} from '$lib/seo';
+import {SITE,MOTHER} from '#lib/seo';
 export type SchemaObject=Record<string,unknown>;
 export const buildOrganizationSchema=():SchemaObject=>({'@type':'EducationalOrganization','@id':SITE+'/#organization',name:'SchoolXense',url:SITE,logo:SITE+'/icon-512.png',description:'Education and reviewed exam practice within the E-WIN Project ecosystem.',parentOrganization:{'@id':MOTHER+'/#organization'}});
 export const buildMotherSchema=():SchemaObject=>({'@type':'Organization','@id':MOTHER+'/#organization',name:'Elite Workforce Impact Nigeria (E-WIN) Project',legalName:'Elite Workforce Enterprises and Digital Emerging Arbitrage & Leverage Services',url:MOTHER});

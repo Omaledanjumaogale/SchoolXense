@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { authenticatedClient, assertSameOrigin } from '$lib/server/convex';
-import { secret, signGrant, validMedia } from '$lib/server/media';
+import { authenticatedClient, assertSameOrigin } from '#lib/server/convex';
+import { secret, signGrant, validMedia } from '#lib/server/media';
 import { api } from '$convex/_generated/api';
 export const POST: RequestHandler = async event => {
  assertSameOrigin(event); const client = authenticatedClient(event);

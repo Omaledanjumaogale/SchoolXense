@@ -1,10 +1,10 @@
 import {ConvexHttpClient} from 'convex/browser';
 import {error} from '@sveltejs/kit';
 import {api} from '$convex/_generated/api';
-import {CONVEX_URL} from '$lib/config';
-import {buildMeta,SITE} from '$lib/seo';
-import {buildPageGraph} from '$lib/schema/graph';
-import {buildOrganizationSchema,buildMotherSchema,buildBreadcrumbSchema} from '$lib/schema/builders';
+import {CONVEX_URL} from '#lib/config';
+import {buildMeta,SITE} from '#lib/seo';
+import {buildPageGraph} from '#lib/schema/graph';
+import {buildOrganizationSchema,buildMotherSchema,buildBreadcrumbSchema} from '#lib/schema/builders';
 export const load=async({params}:{params:{id:string}})=>{
  const cohort=await new ConvexHttpClient(CONVEX_URL).query(api.portal.publicCohort,{id:params.id});
  if(!cohort)error(404,'Upcoming cohort not found');

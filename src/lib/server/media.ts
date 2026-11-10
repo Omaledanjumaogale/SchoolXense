@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { error, type RequestEvent } from '@sveltejs/kit';
 export type MediaGrant = { key: string; ownerId: string; kind: 'image' | 'document'; contentType: string; size: number; expires: number };
 const encoder = new TextEncoder();

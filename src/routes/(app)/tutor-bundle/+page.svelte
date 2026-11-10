@@ -1,5 +1,5 @@
 <script lang="ts">
- import TutorBundles from '$lib/live/TutorBundles.svelte';
+ import TutorBundles from '#lib/live/TutorBundles.svelte';
  import PageHeader from '$ui/PageHeader.svelte';
 </script>
 <svelte:head><title>Tutor bundle · SchoolXense</title><meta name="robots" content="noindex,nofollow"/></svelte:head>

@@ -4,9 +4,9 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 /** @type {import('@sveltejs/kit').Config} */
 export default {
 	preprocess: vitePreprocess(),
-	kit: {
 		adapter: adapter({ routes: { include: ['/*'], exclude: ['<all>'] },platformProxy:{persist:false} }),
 		alias: {
+			'#lib': 'src/lib',
 			$convex: './convex',
 			$ui: 'src/lib/ui',
 			$engines: 'src/lib/engines',
@@ -28,5 +28,4 @@ export default {
 				'form-action': ['self', 'https://checkout.flutterwave.com']
 			}
 		}
-	}
 };

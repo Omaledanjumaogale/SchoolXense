@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { verifyWebhookHash } from '$payments/flutterwave';
 import {verifyHmacSignature} from '$payments/gateways';
 

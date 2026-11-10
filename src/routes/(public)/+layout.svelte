@@ -2,7 +2,7 @@
 	import PublicNav from '$ui/PublicNav.svelte';
 	import Footer from '$ui/Footer.svelte';
 	import { page } from '$app/state';
-	import LiveCatalogue from '$lib/live/LiveCatalogue.svelte';
+	import LiveCatalogue from '#lib/live/LiveCatalogue.svelte';
 	let { children } = $props();
 </script>
 

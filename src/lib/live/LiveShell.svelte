@@ -1,11 +1,11 @@
 <script lang="ts">
  import StoryRibbon from "./StoryRibbon.svelte";
- import LanguageSelect from '$lib/i18n/LanguageSelect.svelte';
- import {dashboardLocale,dashboardText} from "$lib/i18n/dashboard.svelte";
+ import LanguageSelect from '#lib/i18n/LanguageSelect.svelte';
+ import {dashboardLocale,dashboardText} from "#lib/i18n/dashboard.svelte";
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { authClient } from '$lib/auth-client';
+	import { authClient } from '#lib/auth-client';
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { useQuery } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';

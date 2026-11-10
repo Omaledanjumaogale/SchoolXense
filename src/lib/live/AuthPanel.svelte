@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { authClient } from '$lib/auth-client';
+	import { authClient } from '#lib/auth-client';
 	import PasswordInput from '$ui/PasswordInput.svelte';
 	import Icon from '$ui/Icon.svelte';
 	import ResidenceFields from './ResidenceFields.svelte';
-	import LanguageSelect from '$lib/i18n/LanguageSelect.svelte';
-	import {accountText} from '$lib/i18n/account';
+	import LanguageSelect from '#lib/i18n/LanguageSelect.svelte';
+	import {accountText} from '#lib/i18n/account';
 	let locale=$state('en');const text=$derived(accountText(locale));
 	let residenceState=$state(''),lga=$state(''),whatsapp=$state(''),nin=$state('');
 	let { mode = 'login' }: { mode?: 'login' | 'signup' | 'admin' | 'forgot' | 'reset' } = $props();

@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import {page} from '$app/state';import {goto} from '$app/navigation';import {useQuery,useConvexClient} from 'convex-svelte';import {useAuth} from '@mmailaender/convex-better-auth-svelte/svelte';import {api} from '$convex/_generated/api';import {naira} from '$ui/format';
  let {slug}:{slug:string}=$props();const client=useConvexClient(),auth=useAuth(),pack=useQuery(api.portal.publicPack,()=>({slug})),access=useQuery(api.portal.packAccess,()=>auth.isAuthenticated&&pack.data?{packId:pack.data._id}:'skip');let busy=$state(false),error=$state('');
  const resource=$derived(pack.data??page.data.publicPack);

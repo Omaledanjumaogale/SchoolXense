@@ -1,6 +1,6 @@
 <script lang="ts">
- import { nigeria, states } from '$lib/data/nigeria';
- import {accountText} from '$lib/i18n/account';
+ import { nigeria, states } from '#lib/data/nigeria';
+ import {accountText} from '#lib/i18n/account';
  import PasswordInput from '$ui/PasswordInput.svelte';
  let { state=$bindable(''),lga=$bindable(''),whatsapp=$bindable(''),nin=$bindable(''),prefix='residence',required=true,locale='en' }: {state?:string;lga?:string;whatsapp?:string;nin?:string;prefix?:string;required?:boolean;locale?:string}=$props();
 const text=$derived(accountText(locale));

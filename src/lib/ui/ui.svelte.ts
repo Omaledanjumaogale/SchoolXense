@@ -1,6 +1,6 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { hive } from '$hive/store.svelte';
-import { DEMO_MODE } from '$lib/config';
+import { DEMO_MODE } from '#lib/config';
 
 type Toast = { id: number; title: string; body?: string; tone: 'good' | 'warn' | 'bad' | 'info' };
 

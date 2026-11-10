@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
  import {useQuery,useConvexClient} from 'convex-svelte';import {api} from '$convex/_generated/api';import type {Id} from '$convex/_generated/dataModel';import {naira} from '$ui/format';
  const client=useConvexClient(),emails=useQuery(api.emailDelivery.queue,{}),payments=useQuery(api.gateways.reconciliationQueue,{});let busy=$state(false),message=$state(''),charges=$state<Record<string,string>>({});
  async function refresh(){busy=true;try{await client.mutation(api.emailDelivery.refreshNow,{});message='Delivery checks queued. Accepted requests remain distinct from delivered messages.';}catch(e){message=e instanceof Error?e.message:'Refresh failed';}finally{busy=false;}}

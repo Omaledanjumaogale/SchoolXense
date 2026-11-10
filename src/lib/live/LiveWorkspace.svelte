@@ -1,5 +1,5 @@
 <script lang="ts">
- import {dashboardText} from "$lib/i18n/dashboard.svelte";
+ import {dashboardText} from "#lib/i18n/dashboard.svelte";
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { useAuth } from '@mmailaender/convex-better-auth-svelte/svelte';
@@ -7,7 +7,7 @@
 	import { api } from '$convex/_generated/api';
 	import type { Id } from '$convex/_generated/dataModel';
 	import { naira } from '$ui/format';
-	import { APP_URL } from '$lib/config';
+	import { APP_URL } from '#lib/config';
 	import Icon from '$ui/Icon.svelte';
 	import LivePractice from './LivePractice.svelte';
 	import LiveCheckout from './LiveCheckout.svelte';

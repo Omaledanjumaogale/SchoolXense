@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { SEED_QUESTIONS } from '$hive/questions';
-import { DEMO_MODE } from '$lib/config';
+import { DEMO_MODE } from '#lib/config';
 
 /**
  * Africa's Talking USSD (*384*HIVE#). AT posts form fields: sessionId, phoneNumber, serviceCode, text.
