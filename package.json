@@ -1,7 +1,7 @@
 {
   "name": "schoolxense",
   "version": "1.0.0",
-  "description": "SchoolXense — the unified learn-and-earn hub (Hive Secondary, Campus, Pro, Tutors, Cohorts, Library, Studio, Collab, Skills, Institutions, Ambassadors, Record).",
+  "description": "SchoolXense \u2014 the unified learn-and-earn hub (Hive Secondary, Campus, Pro, Tutors, Cohorts, Library, Studio, Collab, Skills, Institutions, Ambassadors, Record).",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,9 @@
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
     "deploy": "npm run build && wrangler pages deploy .svelte-kit/cloudflare --project-name schoolxense",
-    "check:backend": "tsc -p convex/tsconfig.json"
+    "check:backend": "tsc -p convex/tsconfig.json",
+    "ewin:validate": "node scripts/validate-ewin-v31.mjs",
+    "pretest": "node scripts/validate-ewin-v31.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
