@@ -73,6 +73,7 @@
 		{#if ['login', 'signup', 'admin'].includes(mode)}
 			<div class="divider"></div>
 			<div class="grid sm:grid-cols-2 gap-2"><button type="button" class="ctl" disabled={busy} onclick={() => social('google')}><Icon name="globe" size={16} />Google</button><button type="button" class="ctl" disabled={busy} onclick={() => social('github')}><Icon name="code" size={16} />GitHub</button></div>
+			<a class="ctl" href={`/auth/ewin/start?next=${encodeURIComponent(safeNext())}`}><Icon name="badge" size={16} />E-WIN</a>
 			<button type="button" class="link text-sm" disabled={busy || !email} onclick={resend}>{text.resend}</button>
 		{/if}
 	</form>
