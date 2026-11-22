@@ -8,7 +8,7 @@ const HUB = 'https://ewinproject.org';
 const PLATFORM = 'schoolxense';
 
 function safeNext(raw: string | null): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('\') ? raw : '';
+  return raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('\\') ? raw : '';
 }
 
 export const GET: RequestHandler = ({ url }) => {

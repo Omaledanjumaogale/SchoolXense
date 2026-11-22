@@ -17,7 +17,7 @@ const bounce = (reason: string, next: string): never =>
 export const load: PageServerLoad = async ({ url, cookies, fetch }) => {
   const ticket = url.searchParams.get('ewin_ticket') ?? '';
   const rawNext = url.searchParams.get('next') ?? '';
-  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('\') ? rawNext : FALLBACK_LANDING;
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('\\') ? rawNext : FALLBACK_LANDING;
   if (!ticket) bounce('missing_ticket', next);
   const convexUrl = env.PUBLIC_CONVEX_URL;
   if (!convexUrl) bounce('unconfigured', next);
