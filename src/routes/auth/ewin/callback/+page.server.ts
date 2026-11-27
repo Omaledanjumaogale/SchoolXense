@@ -18,16 +18,16 @@ export const load: PageServerLoad = async ({ url, cookies, fetch }) => {
   const ticket = url.searchParams.get('ewin_ticket') ?? '';
   const rawNext = url.searchParams.get('next') ?? '';
   const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('\\') ? rawNext : FALLBACK_LANDING;
-  if (!ticket) bounce('missing_ticket', next);
+  if (!ticket) return bounce('missing_ticket', next);
   const convexUrl = env.PUBLIC_CONVEX_URL;
-  if (!convexUrl) bounce('unconfigured', next);
+  if (!convexUrl) return bounce('unconfigured', next);
 
   let token: string | undefined;
   try {
     const response = await fetch(`${convexUrl}/api/action`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ path: 'ewin/redeem', format: 'json', args: [{ ticket }] }),
+      body: JSON.stringify({ path: 'ewin:redeem', format: 'json', args: [{ ticket }] }),
       signal: AbortSignal.timeout(20_000),
     });
     const body = response.ok ? ((await response.json().catch(() => null)) as { status?: string; value?: { token?: string } } | null) : null;
@@ -35,9 +35,10 @@ export const load: PageServerLoad = async ({ url, cookies, fetch }) => {
   } catch {
     token = undefined;
   }
-  if (!token) bounce('failed', next);
+  if (!token) return bounce('failed', next);
 
-  const attributes = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: true, maxAge: 60 * 60 * 24 * 30 };
+  const secure = url.protocol === 'https:';
+  const attributes = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure, maxAge: 60 * 60 * 24 * 30 };
   cookies.set('better-auth.session_token', token, attributes);
   cookies.set('__Secure-better-auth.session_token', token, attributes);
   redirect(303, next);
